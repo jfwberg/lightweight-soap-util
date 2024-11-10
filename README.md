@@ -36,7 +36,7 @@ If you want to use your own callout framework you have to modify the `Wsdl.setup
 |Name|Lightweight - Apex SOAP Util|
 |Version|0.1.0-1|
 |Managed Installation URL | */packaging/installPackage.apexp?p0=04tP3000000rqjdIAA*  |
-|Unlocked Installation URL| */packaging/installPackage.apexp?p0=*  |
+|Unlocked Installation URL| */packaging/installPackage.apexp?p0=04tP3000000rqmrIAA*  |
 |Github URL | https://github.com/jfwberg/lightweight-soap-util
 
 ## Basic constructors
