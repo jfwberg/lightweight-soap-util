@@ -4,7 +4,8 @@ This library comes with a set of optional "Response Handlers" for each API type.
 
 This library is modular and can be customized if you only need certain parts in your project. It's goal is to have a lightweight alternative for the well established metadata API from financial force. (It's not to compete, but more an alternative for small metadata implementations)
 
-You can remove the result handling classes all together if you decide to handle the responses yourself.
+## Blog
+See the plog post here: https://medium.com/@justusvandenberg/a-lightweight-salesforce-metadata-api-apex-library-47c0b4c34131
 
 ## About the lightweight packages
 I've written the large set of lightweight libraries over many years and I am making them public one by one for the ones that still hold some value. More years of experience have led to new insights and improvements to the libraries. Refactoring does take a lot of time and not everything might seem the best solution or code but it was at the time of writing the libraries.
@@ -33,8 +34,8 @@ If you want to use your own callout framework you have to modify the `Wsdl.setup
 | Info | Value |
 |---|---|
 |Name|Lightweight - Apex SOAP Util|
-|Version|0.3.0-1|
-|Managed Installation URL | */packaging/installPackage.apexp?p0=*  |
+|Version|0.1.0-1|
+|Managed Installation URL | */packaging/installPackage.apexp?p0=04tP3000000rqjdIAA*  |
 |Unlocked Installation URL| */packaging/installPackage.apexp?p0=*  |
 |Github URL | https://github.com/jfwberg/lightweight-soap-util
 
@@ -65,7 +66,7 @@ soap.Wsdl soapAction = new soap.ParWsdl('[SOAP_ACTION_NAME]')
 
     // Support methods
     .call()                     // Create and Execute the SOAP HTTP callout
-    .handleResponse()           // Throw an Exception with the SOAP API error message in case of a 500 response code
+    .handleErrors()           // Throw an Exception with the SOAP API error message in case of a 500 response code
 ;
 
 // Test Method to override the HttpResponse returned by the Http.send() exection
@@ -85,14 +86,15 @@ XmlStreamReader xsr = soapAction.getXsr();
 ```
 
 ## Exceptions
+|Exception|Description
+|-----|-----|
+`soap.Wsdl.SoapApiException` | Exception is thrown when something went wrong when calling a SOAP API. This is thrown only by the the call() and getXsr() methods. The SOAP API only returns status code 500 for any error and 200 for successes. This exception is thrown when the API returns anything else besides 200.|
+`soap.Wsdl.SoapUtilException` | Exception is thrown when something unexpected in the utility happens before executing the actual HTTP callout|
 
-`soap.Wsdl.SoapApiException` || Exception is thrown when something went wrong when calling a SOAP API. This is thrown only by the the call() and getXsr() methods. The SOAP API only returns status code 500 for any error and 200 for successes. This exception is thrown when the API returns anything else besides 200.
-`soap.Wsdl.SoapUtilException` || Exception is thrown when something unexpected in the utility happens before executing the SOAP call.
+## Error handling diagram
+If you choose to use the `handleErrors()` methods an soap.Wsdl.SoapApiException will be thrown. The following diagram shows how this error handling works:
+![Salesforce SOAP API Error Handling Diagram](media/soap-api-error-handling-diagram.png "Salesforce SOAP API Error Handling Diagram")
 
-
-## Handler Classes
-Each WSDL class comes with it's own optional handler. This parses the XML response into an Apex Structure.
-See the examples below and check out the details in the class or debug using ```JSON.serializePretty(result)```.
 
 ## Metadata API Methods
 ```java
