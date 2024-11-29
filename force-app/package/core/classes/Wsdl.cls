@@ -70,13 +70,18 @@ global virtual with sharing class Wsdl {
      **                                          PRIVATE CONSTANTS                                           **
      ** **************************************************************************************************** **/
     // Standard Salesforce API format like v62.0
-    private static final String VAL_API_VERSION                = '[v]\\d\\d[.][0]';
+    private static final String VAL_API_VERSION           = '[v]\\d\\d[.][0]';
 
     // SOAP Api setup variables
-    private static final String VAL_DEFAULT_API_VERSION        = 'v62.0';
+    private static final String VAL_DEFAULT_API_VERSION   = 'v62.0';
 
-    // Lightning theme to validate if the user is in an Aura Context
-    private static final String VAL_LIGHTNING_UI_DISPLAY_THEME = 'Theme4d';
+    // Execution contexts that use the lightning session id instead of the standard session id
+    // AURA for Lightning Web Components and INVOCABLE_ACTION for Agentforce actions
+    // Using a name credential for your connection is still the recommended approach
+    private static final Set<Quiddity> LIGHTNING_CONTEXTS = new Set<Quiddity>{
+        Quiddity.AURA,
+        Quiddity.INVOCABLE_ACTION
+    };
 
     // Merge variable when using the API with a named credentials
     @TestVisible private static final String VAL_NC_TOKEN_MERGE_VARIABLE        = '{!$Credential.OAuthToken}';
@@ -251,7 +256,9 @@ global virtual with sharing class Wsdl {
      *    @return         self
      */
     global Wsdl setMockResponse(HttpResponse mockResponse){
-        this.mockResponse = mockResponse;
+        // Added a new HttpResponse in case of accidental null input
+        // throwing null pointer exceptions for arguments
+        this.mockResponse = mockResponse ?? new HttpResponse();
         return this;
     }
 
@@ -516,8 +523,8 @@ global virtual with sharing class Wsdl {
         return(
             (Test.isRunningTest()) ?
                 Wsdl.VAL_BEARER_TOKEN_HIDDEN_MESSAGE :
-                (System.Request.getCurrent().getQuiddity() == Quiddity.AURA || UserInfo.getUiThemeDisplayed() == Wsdl.VAL_LIGHTNING_UI_DISPLAY_THEME) ?
-                    Page.getSoapApiSessionId.getContent().toString().trim() :
+                (LIGHTNING_CONTEXTS.contains(System.Request.getCurrent().getQuiddity())) ?
+                    Page.getSoapApiSessionId?.getContent()?.toString()?.trim() :
                     UserInfo.getSessionId()
         );
     }

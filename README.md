@@ -29,15 +29,14 @@ There is a time and place for metadata changes from Apex, but ideally any change
 If you want to use your own callout framework you have to modify the `Wsdl.setupRequest()` method to be `global` or `public`. Instead of the running the `Wsdl.call()` method you run the `Wsdl.setupRequest()` method to create a `HttpRequest` class instance you can use with your own imlementation.
 *Warning*: The request contains a valid Session Id that could be exposed by outputting the request body, so you need to handle this securely yourself in your implementation.
 
-
 ## Package Info
 | Info | Value |
 |---|---|
-|Name|Lightweight - Apex SOAP Util|
-|Version|0.1.0-1|
-|Managed Installation URL | */packaging/installPackage.apexp?p0=04tP3000000rqjdIAA*  |
-|Unlocked Installation URL| */packaging/installPackage.apexp?p0=04tP3000000rqmrIAA*  |
-|Github URL | https://github.com/jfwberg/lightweight-soap-util
+|Name                     |Lightweight - Apex SOAP Util                             |
+|Version                  | 0.2.0-1                                                 |
+|Managed Installation URL | */packaging/installPackage.apexp?p0=04tP3000000uNzdIAE* |
+|Unlocked Installation URL| */packaging/installPackage.apexp?p0=04tP3000000uO1FIAU* |
+|Github URL               | https://github.com/jfwberg/lightweight-soap-util        |
 
 ## Basic constructors
 Each Soap call is constructed using one of the API WSDL classes as per below examples. Each WSDL has it's own specific methods but can call the extended Wsdl Class methods as well.
@@ -65,8 +64,8 @@ soap.Wsdl soapAction = new soap.ParWsdl('[SOAP_ACTION_NAME]')
     .setDefaultNamespace('[NAMESPACE]')  // If you work in a package org, set the namespace to match the org's namespace
 
     // Support methods
-    .call()                     // Create and Execute the SOAP HTTP callout
-    .handleErrors()           // Throw an Exception with the SOAP API error message in case of a 500 response code
+    .call()           // Create and Execute the SOAP HTTP callout
+    .handleErrors()   // Throw an Exception with the SOAP API error message in case of a 500 response code
 ;
 
 // Test Method to override the HttpResponse returned by the Http.send() exection

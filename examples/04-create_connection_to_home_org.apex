@@ -26,9 +26,9 @@ String appName  = 'Home_Org';
 String appLabel = 'Home Org';
 
 // Only use on scratch orgs that have a namespace attached to it
-// Make sure to add the underscores at the end like "ns__" or the permission set update will fail
+// Make sure to NOT add the underscores at the end like "ns__" or the permission set update will fail
 // Make it an empty string like '' if you do not use a namespace
-String appNamespace = 'soap__';
+String appNamespace = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
 
 // Email recipient who get's the details of what has been created
 String emailRecipient = 'jfwberg+soap-demo@gmail.com';
@@ -61,12 +61,13 @@ try{
                 'masterLabel'          => appLabel
             }
         )
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .call()
         .handleErrors()
     ;
 
     System.debug(createCertificateAction.getResponse()?.getBody());
+    System.debug('Successfully upserted Certificate');
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -86,12 +87,13 @@ try{
                 'description'   => 'Provides access to the ' + appLabel + ' Connected App'
             }
         )
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .call()
         .handleErrors()
     ;
 
     System.debug(createPermissionSetAction.getResponse()?.getBody());
+    System.debug('Successfully upserted Permission Set');
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -113,12 +115,13 @@ try{
                 'url'                       => Url.getOrgDomainUrl().toExternalForm()
             }
         )
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .call()
         .handleErrors()
     ;
 
     System.debug(createRemoteSiteSettingAction.getResponse()?.getBody());
+    System.debug('Successfully upserted Remote Site Setting');
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -132,7 +135,7 @@ try{
     XmlStreamReader xsr = new soap.MdtWsdl('readMetadata')
         .setItemMetadataType('Certificate')
         .addItemMetadataFullName(appName)
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .getXsr()
     ;
     
@@ -149,6 +152,9 @@ try{
         }
         xsr.next();
     }
+
+    System.debug('Successfully read the Certificate content');
+    
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
 }
@@ -207,12 +213,13 @@ try{
                 }  
             }
         )
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .call()
         .handleErrors()
     ;
 
     System.debug(createConnectedApp.getResponse()?.getBody());
+    System.debug('Successfully upserted Connected App');
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -226,7 +233,7 @@ try{
     XmlStreamReader xsr = new soap.MdtWsdl('readMetadata')
         .setItemMetadataType('ConnectedApp')
         .addItemMetadataFullName(appName)
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .getXsr()
     ;
     
@@ -243,6 +250,9 @@ try{
         }
         xsr.next();
     }
+
+    System.debug('Successfully read the Connected App Id:' + connectedAppId);
+
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
 }
@@ -356,12 +366,13 @@ try{
                 }
             }
         )
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .call()
         .handleErrors()
     ;
 
     System.debug(createExternalCredentialAction.getResponse()?.getBody());
+    System.debug('Successfully upserted External Credential');
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -423,12 +434,13 @@ try{
                 }
             }
         )
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .call()
         .handleErrors()
     ;
 
     System.debug(createNamedCredentialAction.getResponse()?.getBody());
+    System.debug('Successfully upserted Named Credential');
     
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -449,21 +461,22 @@ try{
                 'externalCredentialPrincipalAccesses'   => new Object[]{
                     new Map<String,Object>{
                         'enabled'                       => true,
-                        'externalCredentialPrincipal'   => appNamespace + appName + '-NAMED_PRINCIPAL'
+                        'externalCredentialPrincipal'   => ((String.isNotBlank(appNamespace)) ? appNamespace + '__' : '') + appName + '-NAMED_PRINCIPAL'
                     },
                     new Map<String,Object>{
                         'enabled'                       => true,
-                        'externalCredentialPrincipal'   => appNamespace + appName + '-PER_USER_PRINCIPAL'
+                        'externalCredentialPrincipal'   => ((String.isNotBlank(appNamespace)) ? appNamespace + '__' : '') + appName + '-PER_USER_PRINCIPAL'
                     }
                 }
             }
         )
-        .setDefaultNamespace('soap')
+        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .call()
         .handleErrors()
     ;
 
     System.debug(updatePermissionSetAction.getResponse()?.getBody());
+    System.debug('Successfully updated Permission Set');
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -486,7 +499,7 @@ if([SELECT Id FROM PermissionSetAssignment WHERE PermissionSetId = :permSetId AN
 // So run the test afterwards, this should work instantly
 }else{
     HttpRequest req = new HttpRequest();
-    req.setEndpoint('callout:'+appNamespace+appName+'/services/data');
+    req.setEndpoint('callout:'+ ((String.isNotBlank(appNamespace)) ? appNamespace + '__' : '') + appName+'/services/data');
     req.setMethod('GET');
     Http http = new Http();
     HttpResponse res = http.send(req);
