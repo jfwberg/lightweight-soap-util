@@ -22,21 +22,21 @@ There is a time and place for metadata changes from Apex, but ideally any change
 
 # Goals
 - Simple and clean SOAP API for multiple wsdls
-- Secure by design, no exposing of sessionIds or sensitive data
+- Secure by design (since v0.3 the session Id can be exposed if you don't use named credentials. See next paragraph)
 - No dependencies
 
 ## How to use with your own HttpCallout framework?
-If you want to use your own callout framework you have to modify the `Wsdl.setupRequest()` method to be `global` or `public`. Instead of the running the `Wsdl.call()` method you run the `Wsdl.setupRequest()` method to create a `HttpRequest` class instance you can use with your own imlementation.
+Instead of the running the `Wsdl.call()` method you run the `Wsdl.setupRequest()` method to create a `HttpRequest` class instance you can use with your own imlementation.
 *Warning*: The request contains a valid Session Id that could be exposed by outputting the request body, so you need to handle this securely yourself in your implementation.
 
 ## Package Info
-| Info | Value |
-|---|---|
-|Name                     |Lightweight - Apex SOAP Util                             |
-|Version                  | 0.2.0-1                                                 |
-|Managed Installation URL | */packaging/installPackage.apexp?p0=04tP3000000uNzdIAE* |
-|Unlocked Installation URL| */packaging/installPackage.apexp?p0=04tP3000000uO1FIAU* |
-|Github URL               | https://github.com/jfwberg/lightweight-soap-util        |
+| Info | Value | ||
+|---|---|---|---|
+|Name|Lightweight - Apex SOAP Util ||
+|Version|0.3.0-1||
+|**Managed** | `sf package install --wait 30 --security-type AllUsers --package 04tP30000014Ev3IAE` | [Install in production](https://login.salesforce.com/packaging/installPackage.apexp?mgd=true&p0=04tP30000014Ev3IAE) | [Install in Sandbox](https://login.salesforce.com/packaging/installPackage.apexp?mgd=true&p0=04tP30000014Ev3IAE)|
+|**Unlocked**| `sf package install --wait 30 --security-type AllUsers --package 04tP30000014EwfIAE` | [Install in production](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP30000014EwfIAE)          | [Install in Sandbox](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP30000014EwfIAE)|
+|Github URL  | https://github.com/jfwberg/lightweight-soap-util        |
 
 ## Basic constructors
 Each Soap call is constructed using one of the API WSDL classes as per below examples. Each WSDL has it's own specific methods but can call the extended Wsdl Class methods as well.
@@ -62,10 +62,14 @@ soap.Wsdl soapAction = new soap.ParWsdl('[SOAP_ACTION_NAME]')
     .setApiVersion('[API_VERSION]')      // Set a custom API version, must be in this format "vXX.x"
     .setClientId('[CLIENT_ID]')          // Optionally set a client Id (for professional edition orgs only)
     .setDefaultNamespace('[NAMESPACE]')  // If you work in a package org, set the namespace to match the org's namespace
+    .setTimeout(60000)                   // Set the API request timeout to a custom value, defaults to 120,000ms
 
     // Support methods
     .call()           // Create and Execute the SOAP HTTP callout
     .handleErrors()   // Throw an Exception with the SOAP API error message in case of a 500 response code
+    .setupRequest()   // sets up the entire api request but does not execute callout
+                      // This allows usage with a custom REST callout frame work (trade off is the potential 
+                      // exposure of the session Id when you don't use named credentials)
 ;
 
 // Test Method to override the HttpResponse returned by the Http.send() exection
@@ -87,7 +91,7 @@ XmlStreamReader xsr = soapAction.getXsr();
 ## Exceptions
 |Exception|Description
 |-----|-----|
-`soap.Wsdl.SoapApiException` | Exception is thrown when something went wrong when calling a SOAP API. This is thrown only by the the call() and getXsr() methods. The SOAP API only returns status code 500 for any error and 200 for successes. This exception is thrown when the API returns anything else besides 200.|
+`soap.Wsdl.SoapApiException`  | Exception is thrown when something went wrong when calling a SOAP API. This is thrown only by the the call() and getXsr() methods. The SOAP API only returns status code 500 for any error and 200 for successes. This exception is thrown when the API returns anything else besides 200.|
 `soap.Wsdl.SoapUtilException` | Exception is thrown when something unexpected in the utility happens before executing the actual HTTP callout|
 
 ## Error handling diagram

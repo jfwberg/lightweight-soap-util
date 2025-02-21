@@ -4,6 +4,9 @@
  * @description An example of using the metadata API WSDL methods to create a 
  *              SAML configuration so that external apps can connect automatically.
  * 
+ * @note        !! ONLY USE IN SANDBOXES AND NEVER USE THIS IN PRODUCTION OR FULL SANDBOX !!
+ *              !! SPEAK WITH YOUR SECURITY EXPERTS ON HOW TO SECURELY IMPLEMENT !!
+ * 
  * @note        Run the creation of the named credential first using the 
  *              create_connection_to_home_org.apex file in the example folder.
  *              and keep the app settings the same. Or remove the name credentiol name
@@ -76,7 +79,7 @@ try{
 HttpRequest req = new HttpRequest();
     
 // Query the certificate Id using the newly created named credential and the tooling API
-req.setEndpoint('callout:'+appNamespace+appName+'/services/data/v62.0/tooling/query?q=SELECT+Id+FROM+Certificate+WHERE+DeveloperName=\''+appName+'\'+LIMIT+1');
+req.setEndpoint('callout:'+appNamespace+appName+'/services/data/v63.0/tooling/query?q=SELECT+Id+FROM+Certificate+WHERE+DeveloperName=\''+appName+'\'+LIMIT+1');
 req.setMethod('GET');
 
 // Parse the records result and fetch the records

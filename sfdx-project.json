@@ -1,17 +1,17 @@
 {
   "packageDirectories": [
     {
-      "versionName": "v62.0 - 0.2",
-      "versionNumber": "0.2.0.NEXT",
-      "ancestorVersion": "0.1.0",
+      "versionName": "v63.0 - 0.3",
+      "versionNumber": "0.3.0.NEXT",
+      "ancestorVersion": "0.2.0",
       "path": "force-app/package",
       "default": true,
       "package": "Lightweight - SOAP Util",
       "versionDescription": "A lightweight utility to call the synchronous methods of the SOAP APIs or any Org using the WSDLs. Included are the Metadata, Partner and Apex API."
     },
     {
-      "versionName": "v62.0 - 0.2",
-      "versionNumber": "0.2.0.NEXT",
+      "versionName": "v63.0 - 0.3",
+      "versionNumber": "0.3.0.NEXT",
       "path": "force-app/package",
       "default": false,
       "package": "Lightweight - SOAP Util (Unlocked)",
@@ -21,13 +21,15 @@
   "name": "lightweight-soap-util",
   "namespace": "soap",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "62.0",
+  "sourceApiVersion": "63.0",
   "packageAliases": {
     "Lightweight - SOAP Util": "0HoP300000000mPKAQ",
     "Lightweight - SOAP Util@0.1.0-2": "04tP3000000rqjdIAA",
     "Lightweight - SOAP Util@0.2.0-1": "04tP3000000uNzdIAE",
+    "Lightweight - SOAP Util@0.3.0-1": "04tP30000014Ev3IAE",
     "Lightweight - SOAP Util (Unlocked)": "0HoP300000000o1KAA",
     "Lightweight - SOAP Util (Unlocked)@0.1.0-1": "04tP3000000rqmrIAA",
-    "Lightweight - SOAP Util (Unlocked)@0.2.0-1": "04tP3000000uO1FIAU"
+    "Lightweight - SOAP Util (Unlocked)@0.2.0-1": "04tP3000000uO1FIAU",
+    "Lightweight - SOAP Util (Unlocked)@0.3.0-1": "04tP30000014EwfIAE"
   }
 }

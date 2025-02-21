@@ -305,6 +305,7 @@ private with sharing class WsdlTest {
         // Set the status 
         res.setStatusCode(500);
         res.setBody(responseBody);
+        
 
         // Start the test
         Test.startTest();
@@ -314,6 +315,7 @@ private with sharing class WsdlTest {
             .setItemMetadataType('CustomObject')
             .addItemMetadataFullName('User')
             .setMockResponse(res)
+            .setTimeout(100000)
         ;
 
         // Execute through reader

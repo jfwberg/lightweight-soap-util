@@ -4,6 +4,9 @@
  * @description An example of using the metadata API WSDL methods to create a 
  *              connection to the current org for secure API access.
  * 
+ * @note        !! ONLY USE IN SANDBOXES AND NEVER USE THIS IN PRODUCTION OR FULL SANDBOX !!
+ *              !! SPEAK WITH YOUR SECURITY EXPERTS ON HOW TO SECURELY IMPLEMENT !!
+ * 
  * @Steps       01 - Create a Certificate
  *              02 - Create a Permission Set
  *              03 - Create a Remote Site Setting to the Home Org

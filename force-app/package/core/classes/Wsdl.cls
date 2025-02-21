@@ -26,14 +26,17 @@ global virtual with sharing class Wsdl {
     private transient String  bearerToken;
 
     // Default API Configuration
-    private String apiVersion = 'v62.0';
-    
+    private String apiVersion = 'v63.0';
+
+    // Set the default time out to the maximum amount
+    private Integer timeout = 120000;
+
     // The HTTP Request that is going to be send and the returned response
     // Transient to remove any secret data during serialization
     private transient HttpRequest  request;
     private transient HttpResponse response;
 
-    // For testing purposes in external packages there is the option to 
+    // For testing purposes in external packages there is the option to
     // override the callout response with a custom mock response
     private transient HttpResponse mockResponse;
 
@@ -69,11 +72,11 @@ global virtual with sharing class Wsdl {
     /** **************************************************************************************************** **
      **                                          PRIVATE CONSTANTS                                           **
      ** **************************************************************************************************** **/
-    // Standard Salesforce API format like v62.0
+    // Standard Salesforce API format like v63.0
     private static final String VAL_API_VERSION           = '[v]\\d\\d[.][0]';
 
     // SOAP Api setup variables
-    private static final String VAL_DEFAULT_API_VERSION   = 'v62.0';
+    private static final String VAL_DEFAULT_API_VERSION   = 'v63.0';
 
     // Execution contexts that use the lightning session id instead of the standard session id
     // AURA for Lightning Web Components and INVOCABLE_ACTION for Agentforce actions
@@ -86,7 +89,7 @@ global virtual with sharing class Wsdl {
     // Merge variable when using the API with a named credentials
     @TestVisible private static final String VAL_NC_TOKEN_MERGE_VARIABLE        = '{!$Credential.OAuthToken}';
 
-    // Test related constants    
+    // Test related constants
     @TestVisible private static final String VAL_BEARER_TOKEN_HIDDEN_MESSAGE    = '[BEARER_TOKEN_HIDDEN]';
 
     // (error) Messages - (Move to Labels)
@@ -94,7 +97,7 @@ global virtual with sharing class Wsdl {
     @TestVisible private static final String MSG_INVALID_SOAP_ACTION            = 'Invalid SOAP ACTION specified';
     @TestVisible private static final String MSG_INVALID_MY_DOMAIN_URL          = 'Invalid My Domain URL format: Urls should start with "https://" and end with ".my.salesforce.com"';
     @TestVisible private static final String MSG_HTTP_CALLOUT_ISSUE             = 'HTTP Response is null. There either was an error during Http Callout or the call() or getXsr() methods have not executed yet';
-    
+
     // SOAP Api Error Messages
     @TestVisible private static final String MSG_UNKNOWN_HTTP_STATUS_CODE       = 'The SOAP API returned an unknown HTTP Status code. Http Status Code: "{0}". Response body: {1}';
     @TestVisible private static final String MSG_EMPTY_RESPONSE_BODY            = 'The SOAP API response body is empty';
@@ -118,8 +121,8 @@ global virtual with sharing class Wsdl {
     /**
      * @description Method to setup the Soap Api for use with a named credential
      */
-    public void setupNamedCredential(String namedCredential){ 
-        
+    public void setupNamedCredential(String namedCredential){
+
         // Set name
         this.setNamedCredential(namedCredential);
 
@@ -136,7 +139,7 @@ global virtual with sharing class Wsdl {
 
         // (re)Set Named Credential
         this.setNamedCredential(null);
-        
+
         // (re)Set My domain / session Id, when using null values, connect to the current org
         this.setBaseUrl(    String.isNotBlank(baseUrl)    ? baseUrl     : URL.getOrgDomainUrl().toExternalForm());
         this.setBearerToken(String.isNotBlank(bearerToken)? bearerToken : this.getApiEnabledSessionId());
@@ -154,7 +157,7 @@ global virtual with sharing class Wsdl {
     private void setBearerToken(String bearerToken){
         this.bearerToken = bearerToken;
     }
-    
+
 
     /**
      * @description Method to set the soap request body
@@ -170,7 +173,7 @@ global virtual with sharing class Wsdl {
     public void setServiceNamespacePrefix(String serviceNamespacePrefix){
         this.serviceNamespacePrefix = serviceNamespacePrefix;
     }
-    
+
     public void setServiceNamespace(String serviceNamespace){
         this.serviceNamespace = serviceNamespace;
     }
@@ -187,9 +190,9 @@ global virtual with sharing class Wsdl {
      * @description Method to set the api version
      */
     global Wsdl setApiVersion(String apiVersion){
-        
+
         // Validate the API version has the expected format
-        if(String.isBlank(apiVersion) || !Pattern.matches(Wsdl.VAL_API_VERSION, apiVersion)){    
+        if(String.isBlank(apiVersion) || !Pattern.matches(Wsdl.VAL_API_VERSION, apiVersion)){
             throw new SoapUtilException(
                 String.format(
                     Wsdl.MSG_API_INVALID_API_VERSION_FORMAT,
@@ -211,7 +214,7 @@ global virtual with sharing class Wsdl {
      *              Client Id is used for API activation in professional edition
      */
     global Wsdl setClientId(String clientId){
-        
+
         // Set the value
         this.clientId = clientId;
 
@@ -229,7 +232,7 @@ global virtual with sharing class Wsdl {
 
         // Set the value
         this.defaultNamespace = defaultNamespace;
-        
+
         // Return self
         return this;
     }
@@ -262,19 +265,29 @@ global virtual with sharing class Wsdl {
         return this;
     }
 
-    
+
+    /**
+     * @description Method to set the api timeout
+     */
+    global virtual Wsdl setTimeout(Integer timeout){
+
+        // Set the timeout
+        this.timeout = timeout ?? 120000;
+
+        // Return self
+        return this;
+    }
+
+
     /** **************************************************************************************************** **
      **                                       GLOBAL SUPPORT METHODS                                         **
      ** **************************************************************************************************** **/
-
-
-
     /**
      * @description Method to generate and execute the HTTP request
      * @return      self
      */
     global Wsdl call(){
-        
+
         // Generate the http request
         this.setupRequest();
 
@@ -299,6 +312,34 @@ global virtual with sharing class Wsdl {
 
 
     /**
+     * @description Method to setup the SOAP API HTTP Request
+     *              The use of this is optional and can be overwritten if you need special logic
+     *              The aim for the library is to always use the standard way, but allow for exceptions
+     * @return      self
+     */
+    global virtual Wsdl setupRequest(){
+
+        // Reset the request
+        this.request = new HttpRequest();
+
+        // Set the default time-out value
+        this.request.setTimeout(this.timeout);
+
+        // Set the method, body and endpoint
+        this.request.setMethod('POST');
+        this.request.setBody(this.getSoapRequestBody());
+        this.request.setEndpoint(this.getApiEndpoint());
+
+        // Set the mandatory headers
+        this.request.setHeader('soapAction',   this.getSoapAction());
+        this.request.setHeader('Content-Type', 'text/xml; charset=UTF-8;');
+
+        // Return self
+        return this;
+    }
+
+
+    /**
      * @description Optional method to handle the response by throwing an exception
      *              on a 500 status code. The soap api throws a 500 for basically any
      *              type of error.
@@ -313,7 +354,7 @@ global virtual with sharing class Wsdl {
 
         // Validate
         switch on this.response.getStatusCode(){
-            
+
             // Do nothing on a succesful call except
             when 200 {
                 return this;
@@ -381,7 +422,7 @@ global virtual with sharing class Wsdl {
 
 
     /**
-     * @description Method to execute the SOAP API call and return the response 
+     * @description Method to execute the SOAP API call and return the response
      *              as an XmlStreamReader object bypassing any error handling.
      *              Executes the sanization of the auth headers before return.
      * @note        Use this method when you run into heap size issues and want the
@@ -389,7 +430,7 @@ global virtual with sharing class Wsdl {
      * @return      The SOAP API Response as an XmlStreamReader class instance
      */
     global XmlStreamReader getXsr(){
-        
+
         // Generate the http request
         this.setupRequest();
 
@@ -403,7 +444,7 @@ global virtual with sharing class Wsdl {
         );
     }
 
-     
+
     /** **************************************************************************************************** **
      **                                            PUBLIC SETTERS                                            **
      ** **************************************************************************************************** **/
@@ -433,7 +474,7 @@ global virtual with sharing class Wsdl {
         );
     }
 
-    
+
     /** **************************************************************************************************** **
      **                                            PUBLIC GETTERS                                            **
      ** **************************************************************************************************** **/
@@ -444,11 +485,11 @@ global virtual with sharing class Wsdl {
     public String getServiceNamespacePrefix(){
         return this.serviceNamespacePrefix;
     }
-    
+
     public String getServiceNamespace(){
         return this.serviceNamespace;
     }
-    
+
     public Map<String, String> getSoapActionMap(){
         return this.soapActionMap;
     }
@@ -458,7 +499,7 @@ global virtual with sharing class Wsdl {
     }
 
     public Map<String,String> getNamespaceHeaderMap(){
-        return this.namespaceHeaderMap; 
+        return this.namespaceHeaderMap;
     }
 
 
@@ -476,14 +517,14 @@ global virtual with sharing class Wsdl {
 
     /**
      * @description Method to set the login URL specifically to a custom my domain URL
-     *              for use with the partner api login function or for use with salesforce connections 
+     *              for use with the partner api login function or for use with salesforce connections
      *              that have already been established after logging using the partner API (or any other way)
      */
     private void setBaseUrl(String baseUrl){
         if(String.isNotBlank(baseUrl) && !baseUrl?.toLowerCase()?.startsWith('https://') && !baseUrl?.toLowerCase()?.endsWith('.my.salesforce.com')){
             throw new SoapUtilException(Wsdl.MSG_INVALID_MY_DOMAIN_URL);
         }
-        // Set the my domain variable 
+        // Set the my domain variable
         this.baseUrl = baseUrl?.removeEnd('//');
     }
 
@@ -496,12 +537,12 @@ global virtual with sharing class Wsdl {
      * @return      The API endpoint based on the home org or named credential
      */
     private String getApiEndpoint(){
-        return    
+        return
         (
             // If there is a named credential, use the named credential
             (String.isNotBlank(this.namedCredential)) ?
                 'callout:' + this.namedCredential :
-                
+
                 // Is a custom base URL set? Use that, else go with the home org domain url
                 (String.isNotBlank(this.baseUrl)) ?
                     this.baseUrl :
@@ -534,10 +575,10 @@ global virtual with sharing class Wsdl {
      * @description Method to generate the SOAP XML Body
      */
     private String getSoapRequestBody(){
-        
+
         // Write the updated body
         XmlWriter.writeFullSoapRequestBody(this);
-        
+
         // Return the newly updated body
         return this.soapRequestBody;
     }
@@ -568,7 +609,7 @@ global virtual with sharing class Wsdl {
 
                     // Get the fault code first
                     if(xsr.getLocalName() == 'faultcode' ){
-                        
+
                         // Indicate it has been found
                         faultCodeFound = true;
 
@@ -590,18 +631,16 @@ global virtual with sharing class Wsdl {
 
                         // Move to the text
                         xsr.next();
-                        
+
                         // Add the text;
                         exceptionMessageValues.add(xsr.getText());
-                        
+
                         // Break the process as we are done
                         break;
                     }
                 }
                 xsr.next();
             }
-
-            System.debug('exceptionMessageValues: ' + exceptionMessageValues);
 
             // Throw an error if the default exceptions have been found
             if(faultCodeFound && faultStringFound){
@@ -629,41 +668,15 @@ global virtual with sharing class Wsdl {
 
 
     /**
-     * @description Method to setup the SOAP API HTTP Request
-     *              The use of this is optional and can be overwritten if you need special logic
-     *              The aim for the library is to always use the standard way, but allow for exceptions
-     * @return      self
-     */
-    @TestVisible
-    private Wsdl setupRequest(){
-        
-        // Reset the request
-        this.request = new HttpRequest();
-
-        // Set the method, body and endpoint
-        this.request.setMethod('POST');
-        this.request.setBody(this.getSoapRequestBody());
-        this.request.setEndpoint(this.getApiEndpoint());
-        
-        // Set the mandatory headers
-        this.request.setHeader('soapAction',   this.getSoapAction());
-        this.request.setHeader('Content-Type', 'text/xml; charset=UTF-8;');
-        
-        // Return self
-        return this;
-    }
-
-
-    /**
-     * @description Method to execute the SOAP API call and return the response 
+     * @description Method to execute the SOAP API call and return the response
      *              as an XmlStreamReader object bypassing any error handling.
      *              Executes the sanization of the auth headers before return.
-     * @param       xsr           The XmlStreamReader instance to return the response as  
+     * @param       xsr           The XmlStreamReader instance to return the response as
      * @param       startDateTime The start date time in milliseconds to calculate the execution time
      * @return      The SOAP API Response as an XmlStreamReader class instance
      */
     private XmlStreamReader handleGetXsr(XmlStreamReader xsr, Integer startDateTime){
-        
+
         // Remove the bearer token from the request after a callout
         this.request.setBody(this.request.getBody().replace(this.bearerToken, VAL_BEARER_TOKEN_HIDDEN_MESSAGE));
 
@@ -698,14 +711,14 @@ global virtual with sharing class Wsdl {
      */
     public virtual void writeSoapBodyContent(XmlStreamWriter w){}
 
-    
+
     /** **************************************************************************************************** **
      **                                          EXCEPTION CLASSES                                           **
      ** **************************************************************************************************** **/
     global class SoapApiException  extends Exception{}
     global class SoapUtilException extends Exception{}
-    
-    
+
+
     /** **************************************************************************************************** **
      **                                              INTERFACES                                              **
      ** **************************************************************************************************** **/

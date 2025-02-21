@@ -17,7 +17,6 @@
 */
 // Describe metadata
 soap.Wsdl dsAction = new soap.MdtWsdl('describeMetadata')
-    .setDefaultNamespace('soap')
     .call()
 ;
 
@@ -27,7 +26,6 @@ soap.Wsdl lsAction = new soap.MdtWsdl('listMetadata')
     .setAllOrNone(true)
     .addListMetadata('Profile')
     .addListMetadata('Report','unfiled$public')	
-    .setDefaultNamespace('soap')
     .call()
 ;
 
@@ -37,7 +35,6 @@ soap.Wsdl rdAction = new soap.MdtWsdl('readMetadata')
     .setItemMetadataType('CustomObject')
     .addItemMetadataFullName('User')
     .addItemMetadataFullName('Account')
-    .setDefaultNamespace('soap')
     .call() 
 ;
 
@@ -54,7 +51,6 @@ soap.Wsdl crAction = new soap.MdtWsdl('createMetadata')
             'url'                       => 'https://remote-org.my.salesforce.com'
         }
     )
-    .setDefaultNamespace('soap')
     .call()
 ;
 
@@ -71,7 +67,6 @@ soap.Wsdl udAction = new soap.MdtWsdl('updateMetadata')
             'url'                       => Url.getOrgDomainUrl().toExternalForm() // Update to current URL
         }
     )
-    .setDefaultNamespace('soap')
     .call()
 ;
 
@@ -82,8 +77,7 @@ soap.Wsdl rnAction = new soap.MdtWsdl('renameMetadata')
         'RemoteSiteSetting',
         'Remote_Org_My_Domain_Url',
         'Home_Org_My_Domain_Url'
-    )
-    .setDefaultNamespace('soap')	
+    )	
     .call()
 ;
 
@@ -100,7 +94,6 @@ soap.Wsdl usAction = new soap.MdtWsdl('upsertMetadata')
             'url'                       => Url.getOrgDomainUrl().toExternalForm()
         }
     )	
-    .setDefaultNamespace('soap')
     .call()
 ;
 
@@ -109,17 +102,16 @@ soap.Wsdl usAction = new soap.MdtWsdl('upsertMetadata')
 soap.Wsdl dlAction = new soap.MdtWsdl('deleteMetadata')
     .setItemMetadataType('RemoteSiteSetting')
     .addItemMetadataFullName('Home_Org_My_Domain_Url')
-    .setDefaultNamespace('soap')
     .call()
 ;
 
 
 // Output each callout and parsing execution time
-System.debug('Describe Metadata (DM) Executing Callout   took: ' + dsAction.getExecutionTime() + 'ms');
-System.debug('List Metadata (LS) Executing Callout   took    : ' + lsAction.getExecutionTime() + 'ms');
-System.debug('Read Metadata (RD) Executing Callout   took    : ' + rdAction.getExecutionTime() + 'ms');
-System.debug('Create Metadata (CR) Executing Callout   took  : ' + crAction.getExecutionTime() + 'ms');
-System.debug('Update Metadata (UD) Executing Callout   took  : ' + udAction.getExecutionTime() + 'ms');
-System.debug('Rename Metadata (RN) Executing Callout   took  : ' + rnAction.getExecutionTime() + 'ms');
-System.debug('Upsert Metadata (US) Executing Callout   took  : ' + usAction.getExecutionTime() + 'ms');
-System.debug('Delete Metadata (DL) Executing Callout   took  : ' + dlAction.getExecutionTime() + 'ms');
+System.debug('Describe Metadata (DM) Executing Callout took : ' + dsAction.getExecutionTime() + 'ms');
+System.debug('List Metadata     (LS) Executing Callout took : ' + lsAction.getExecutionTime() + 'ms');
+System.debug('Read Metadata     (RD) Executing Callout took : ' + rdAction.getExecutionTime() + 'ms');
+System.debug('Create Metadata   (CR) Executing Callout took : ' + crAction.getExecutionTime() + 'ms');
+System.debug('Update Metadata   (UD) Executing Callout took : ' + udAction.getExecutionTime() + 'ms');
+System.debug('Rename Metadata   (RN) Executing Callout took : ' + rnAction.getExecutionTime() + 'ms');
+System.debug('Upsert Metadata   (US) Executing Callout took : ' + usAction.getExecutionTime() + 'ms');
+System.debug('Delete Metadata   (DL) Executing Callout took : ' + dlAction.getExecutionTime() + 'ms');
