@@ -18,6 +18,9 @@
  *              05 - Execute "setupNamedCredential()";
  *              06 - Run test (check the bearer token is a JWT and not just a session Id)
  *              07 - !! MANUAL STEP !! Update your agent with the connected app and you're ready to go
+ * 
+ * @test        See test script here that can be run from anonymous apex
+ *              https://gist.github.com/jfwberg/ca20279173a026b1f269d0a502bb7c4d
  */
 /* STEP 01 */
 String appName      = 'Agent_Api_v1';
