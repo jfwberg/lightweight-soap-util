@@ -4,18 +4,18 @@
  * @description An example of using the metadata API WSDL methods to create a 
  *              connection to the current org for secure API access.
  * 
- * @note        !! ONLY USE IN SANDBOXES AND NEVER USE THIS IN PRODUCTION OR FULL SANDBOX 	!!
- *              !! SPEAK WITH YOUR SECURITY EXPERTS ON HOW TO SECURELY IMPLEMENT 			!!
+ * @note        !! ONLY USE IN SANDBOXES AND NEVER USE THIS IN PRODUCTION OR FULL SANDBOX     !!
+ *              !! SPEAK WITH YOUR SECURITY EXPERTS ON HOW TO SECURELY IMPLEMENT             !!
  * 
  * @Steps       01 - Create a Certificate
  *              02 - Create a Permission Set
  *              03 - Create a Remote Site Setting to the Home Org
  *              04 - Read the Certificate content so it can be used in the External Client App
  *              05 - Create ExternalClientApplication metadata
- * 				06 - Create ExtlClntAppConfigurablePolicies metadata
- * 				07 - Create ExtlClntAppOauthSettings metadata
- * 				08 - Create ExtlClntAppGlobalOauthSettings metadata
- * 				09 - Create ExtlClntAppOauthConfigurablePolicies metadata
+ *              06 - Create ExtlClntAppConfigurablePolicies metadata
+ *              07 - Create ExtlClntAppOauthSettings metadata
+ *              08 - Create ExtlClntAppGlobalOauthSettings metadata
+ *              09 - Create ExtlClntAppOauthConfigurablePolicies metadata
  *              10 - Read the connected app and extract the connected app Id
  *              11 - Create an external credential
  *              12 - Create a named credential
@@ -82,7 +82,7 @@ try{
         )
         .getXsr()
     ;
-	
+    
     for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'PermissionSet')){
         System.debug(result);
     }
@@ -113,7 +113,7 @@ try{
         .getXsr()
     ;
 
-	for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'RemoteSiteSetting')){
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'RemoteSiteSetting')){
         System.debug(result);
     }
 
@@ -177,10 +177,10 @@ try{
         .addCredMetadata(
             'ExtlClntAppConfigurablePolicies',
             new Map<String,Object>{
-                'fullName'              	=> appName + '_plcy',
-                'label'                 	=> appName + '_plcy',
+                'fullName'                  => appName + '_plcy',
+                'label'                     => appName + '_plcy',
                 'externalClientApplication' => appName,
-                'isEnabled'           		=> true,
+                'isEnabled'                 => true,
                 'isOauthPluginEnabled'      => true
             }
         )    
@@ -272,19 +272,19 @@ try{
          .addCredMetadata(
             'ExtlClntAppOauthConfigurablePolicies',
             new Map<String,Object>{
-                'fullName'                        	=> appName + '_oauthPlcy',
-                'label'                         	=> appName + '_oauthPlcy',
-                'externalClientApplication'        	=> appName,
-                'commaSeparatedPermissionSet'    	=> appName,
-                'ipRelaxationPolicyType'        	=> 'Enforce',
-                'isClientCredentialsFlowEnabled'	=> false,
-                'isGuestCodeCredFlowEnabled'    	=> false,
-                'isTokenExchangeFlowEnabled'    	=> false,
-                'permittedUsersPolicyType'        	=> 'AdminApprovedPreAuthorized',
-                'refreshTokenPolicyType'        	=> 'SpecificLifetime',
-                'refreshTokenValidityPeriod'    	=> '365',
-                'refreshTokenValidityUnit'        	=> 'Days',
-                'requiredSessionLevel'            	=> 'STANDARD'
+                'fullName'                          => appName + '_oauthPlcy',
+                'label'                             => appName + '_oauthPlcy',
+                'externalClientApplication'         => appName,
+                'commaSeparatedPermissionSet'       => appName,
+                'ipRelaxationPolicyType'            => 'Enforce',
+                'isClientCredentialsFlowEnabled'    => false,
+                'isGuestCodeCredFlowEnabled'        => false,
+                'isTokenExchangeFlowEnabled'        => false,
+                'permittedUsersPolicyType'          => 'AdminApprovedPreAuthorized',
+                'refreshTokenPolicyType'            => 'SpecificLifetime',
+                'refreshTokenValidityPeriod'        => '365',
+                'refreshTokenValidityUnit'          => 'Days',
+                'requiredSessionLevel'              => 'STANDARD'
             }
         )       
         .getXsr()
@@ -325,7 +325,7 @@ try{
         .addCredMetadata(
             'ExternalCredential',
             new Map<String,Object>{
-                'fullName'                 => appName,
+                'fullName'               => appName,
                 'label'                  => appLabel,
                 'authenticationProtocol' => 'Oauth',
                 'externalCredentialParameters' => new Object[]{
