@@ -1,25 +1,29 @@
 /**
  * @author      Justus van den Berg (jfwberg@gmail.com)
- * @date        November 2024
+ * @date        June 2025
  * @description An example of using the metadata API WSDL methods to create a 
  *              connection to the current org for secure API access.
  * 
- * @note        !! ONLY USE IN SANDBOXES AND NEVER USE THIS IN PRODUCTION OR FULL SANDBOX !!
- *              !! SPEAK WITH YOUR SECURITY EXPERTS ON HOW TO SECURELY IMPLEMENT !!
+ * @note        !! ONLY USE IN SANDBOXES AND NEVER USE THIS IN PRODUCTION OR FULL SANDBOX 	!!
+ *              !! SPEAK WITH YOUR SECURITY EXPERTS ON HOW TO SECURELY IMPLEMENT 			!!
  * 
  * @Steps       01 - Create a Certificate
  *              02 - Create a Permission Set
  *              03 - Create a Remote Site Setting to the Home Org
- *              04 - Read the Certificate content so it can be used in the connected app
- *              05 - Create a Connect App to the Home Org
- *              06 - Read the connected app and extract the connected app Id
- *              07 - Create an external credential
- *              08 - Create a named credential
- *              09 - Update the permission set with external credential principal access
- *              10 - Assign the permission set to the running user
- *              11 - Email org details to a recipient (could be a web-service callout)
+ *              04 - Read the Certificate content so it can be used in the External Client App
+ *              05 - Create ExternalClientApplication metadata
+ * 				06 - Create ExtlClntAppConfigurablePolicies metadata
+ * 				07 - Create ExtlClntAppOauthSettings metadata
+ * 				08 - Create ExtlClntAppGlobalOauthSettings metadata
+ * 				09 - Create ExtlClntAppOauthConfigurablePolicies metadata
+ *              10 - Read the connected app and extract the connected app Id
+ *              11 - Create an external credential
+ *              12 - Create a named credential
+ *              13 - Update the permission set with external credential principal access
+ *              14 - Assign the permission set to the running user
+ *              15 - Email org details to a recipient (could be a web-service callout)
  * 
- * @note        Once the connected app has been created and the permission set assigned
+ * @note        Once the external client has been created and the permission set assigned
  *              you can also create a SAML SSO configuration to the home org using
  *              the newly used named credential see the create_saml_to_home_org.apex file in 
  *              the examples folder
@@ -28,35 +32,22 @@
 String appName  = 'Home_Org';
 String appLabel = 'Home Org';
 
-// Only use on scratch orgs that have a namespace attached to it
-// Make sure to NOT add the underscores at the end like "ns__" or the permission set update will fail
-// Make it an empty string like '' if you do not use a namespace
-String appNamespace = [SELECT NamespacePrefix FROM Organization LIMIT 1].NamespacePrefix;
-
 // Email recipient who get's the details of what has been created
 String emailRecipient = UserInfo.getUserEmail();
 
-// Certificate content from the new certificate we created
+// Temporary variables
 String certificateContent;
-
-// The connected App Id for the newly connected app
 String connectedAppId;
-
-// Indicator if an error has occurred during the execution to prevent any further damage
-Boolean hasError = false;
-
-// Create a new map to hold the status of actions so things can be rolled back
-Map<Integer,Boolean> orchestration = new Map<Integer,Boolean>();
 
 /**
  * 01- CREATE THE CERTIFICATE TO BE USED BY THE CONNECTED APP
  */
-try{
-    soap.Wsdl createCertificateAction = new soap.MdtWsdl('upsertMetadata')
+try {
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
         .addCredMetadata(
             'Certificate',
             new Map<String,Object>{
-                'fullName'		       => appName,
+                'fullName'             => appName,
                 'caSigned'             => false,
                 'expirationDate'       => Datetime.now().addYears(2).format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'').toString(),
                 'keySize'              => 4096,
@@ -64,14 +55,13 @@ try{
                 'masterLabel'          => appLabel
             }
         )
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
-        .call()
-        .handleErrors()
-    ;
-
-    System.debug(createCertificateAction.getResponse()?.getBody());
-    System.debug('Successfully upserted Certificate');
-
+        .getXsr()
+    ; 
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'Certificate')){
+        System.debug(result);
+    }
+    
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
 }
@@ -81,22 +71,24 @@ try{
  * 02 - CREATE THE PERMISSION SET FOR THE CONNECTED APP
  */
 try{
-    soap.Wsdl createPermissionSetAction = new soap.MdtWsdl('upsertMetadata')
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
         .addCredMetadata(
             'PermissionSet',
             new Map<String,Object>{
                 'fullName'      => appName,
                 'label'         => appLabel,
-                'description'   => 'Provides access to the ' + appLabel + ' Connected App'
+                'description'   => 'Provides access to the ' + appLabel + ' External Client App and Named Credential'
             }
         )
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
-        .call()
-        .handleErrors()
+        .getXsr()
     ;
-
-    System.debug(createPermissionSetAction.getResponse()?.getBody());
-    System.debug('Successfully upserted Permission Set');
+	
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'PermissionSet')){
+        System.debug(result);
+    }
+    
+    
+    //System.debug('Successfully upserted Permission Set');
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -107,29 +99,28 @@ try{
  * 03 - CREATE THE REMOTE SITE SETTING
  */
 try{
-    soap.Wsdl createRemoteSiteSettingAction = new soap.MdtWsdl('upsertMetadata')
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
         .addCredMetadata(
             'RemoteSiteSetting',
             new Map<String,Object>{
-                'fullName'		            => appName  + '_My_Domain_Url',
+                'fullName'                  => appName  + '_My_Domain_Url',
                 'description'               => appLabel + ' My Domain URL',
                 'disableProtocolSecurity'   => false,
                 'isActive'                  => true,
                 'url'                       => Url.getOrgDomainUrl().toExternalForm()
             }
         )
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
-        .call()
-        .handleErrors()
+        .getXsr()
     ;
 
-    System.debug(createRemoteSiteSettingAction.getResponse()?.getBody());
-    System.debug('Successfully upserted Remote Site Setting');
+	for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'RemoteSiteSetting')){
+        System.debug(result);
+    }
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
 }
-    
+
 
 /**
  * 04 - READ THE CERTIFICATE METADATA TO GET THE CERTIFICATE DATA
@@ -138,13 +129,12 @@ try{
     XmlStreamReader xsr = new soap.MdtWsdl('readMetadata')
         .setItemMetadataType('Certificate')
         .addItemMetadataFullName(appName)
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .getXsr()
     ;
     
     certificateContent = soap.Util.readSingleValue(xsr, 'content');
-
-    System.debug('Successfully read the Certificate content:' + certificateContent?.length());
+    
+    System.debug('Successfully read the Certificate content. Lenght: ' + certificateContent.length());
     
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -152,79 +142,170 @@ try{
 
 
 /**
- * 05 - CREATE A CONNECTED APP
+ * 05 - CREATE EXTERNAL CLIENT APP
  */
 try{
-    soap.Wsdl createConnectedApp = new soap.MdtWsdl('upsertMetadata')
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
         .addCredMetadata(
-            'ConnectedApp',
-            new Map<String,Object> {
-                'fullName'		=> appName,
-                'label'			=> appLabel,
-                'description'	=> 'A connected App to the '+ appLabel +' in order to use of API that are used by Lightning (Web) components',
-                'contactEmail'	=> UserInfo.getUserEmail(),
-                'oauthConfig'	=> new Map<String,Object> {
-                    'callbackUrl'				=> Url.getOrgDomainUrl().toExternalForm() + '/services/oauth2/callback',
-                    'certificate'				=> certificateContent,
-                    'isAdminApproved'			=> true,
-                    'isConsumerSecretOptional'	=> false,
-                    'isIntrospectAllTokens'		=> false,
-                    'scopes'					=> new Object[]{
-                        'Api',
-                        'Web',
-                        'RefreshToken'
-                    }
-                },
-                'oauthPolicy' => new Map<String,Object>{
-                    'ipRelaxation'		=> 'ENFORCE',
-                    'refreshTokenPolicy'=> 'infinite'
-                },
-                'profileName' => new Object[]{
-                    'System Administrator'
-                },
-                'permissionSetName' => new Object[]{
-                    appLabel
-                },
-                'ipRanges' => new Object[]{
-                    new Map<String,Object>{
-                        'start'			=>'10.0.0.0',
-                        'end'			=>'10.255.255.255',
-                        'description'  => 'Salesforce Internal IP Address range'
-                    }
-                },
-                'attributes' => new Object[]{
-                    new Map<String,Object>{
-                        'key'		=>'validationKey',
-                        'formula'	=>'\'EMTX1\''
-                    },
-                    new Map<String,Object>{
-                        'key'		=>'verificationKey',
-                        'formula'	=>'\'EMTX2\''
-                    }
-                }  
+            'ExternalClientApplication',
+            new Map<String,Object>{
+                'fullName'              => appName,
+                'label'                 => appLabel,
+                'description'           => 'External Client Application that connects to the "Home" Org.',
+                'contactEmail'          => UserInfo.getUserEmail(),
+                'distributionState'     => 'Local',
+                'orgScopedExternalApp'  => UserInfo.getOrganizationId() + ':' + appName
             }
-        )
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
-        .call()
-        .handleErrors()
+        )    
+        .getXsr()
     ;
-
-    System.debug(createConnectedApp.getResponse()?.getBody());
-    System.debug('Successfully upserted Connected App');
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'ExternalClientApplication')){
+        System.debug(result);
+    }
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
 }
-    
+
 
 /**
- * 06 - READ THE CONNECTED APP ID TO BE USED IN THE NAMED CREDENTIAL
+ * 06 - CREATE EXTL_CLNT_APP_CONFIGURABLE_POLICIES
+ */
+try{
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
+        .addCredMetadata(
+            'ExtlClntAppConfigurablePolicies',
+            new Map<String,Object>{
+                'fullName'              	=> appName + '_plcy',
+                'label'                 	=> appName + '_plcy',
+                'externalClientApplication' => appName,
+                'isEnabled'           		=> true,
+                'isOauthPluginEnabled'      => true
+            }
+        )    
+        .getXsr()
+    ;
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'ExtlClntAppConfigurablePolicies')){
+        System.debug(result);
+    }
+
+}catch(soap.Wsdl.SoapApiException e){
+    System.debug(e.getMessage());
+}
+
+
+/**
+ * 07 - CREATE EXTL_CLNT_APP_OAUTH_SETTINGS
+ */
+try{
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
+        .addCredMetadata(
+            'ExtlClntAppOauthSettings',
+            new Map<String,Object>{
+                'fullName'                  => appName + '_oauth',
+                'commaSeparatedOauthScopes' => 'Api, Web, Chatter, RefreshToken, SFApiPlatform, CDP',
+                'externalClientApplication' => appName,
+                'isFirstPartyAppEnabled'    => false,
+                'label'                     => appName + '_oauth'
+            }
+        )
+        .getXsr()
+    ;
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'ExtlClntAppOauthSettings')){
+        System.debug(result);
+    }
+
+}catch(soap.Wsdl.SoapApiException e){
+    System.debug(e.getMessage());
+}
+
+
+/**
+ * 08 - CREATE EXTL_CLNT_APP_GLOBAL_OAUTH_SETTINGS
+ */
+try{
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
+        .addCredMetadata(
+            'ExtlClntAppGlobalOauthSettings',
+            new Map<String,Object>{
+                'fullName'                          => appName + '_glbloauth',
+                'label'                             => appName + '_glbloauth',
+                'callbackUrl'                       => Url.getOrgDomainUrl().toExternalForm() + '/services/oauth2/callback',
+                'certificate'                       => certificateContent,
+                'externalClientApplication'         => appName,
+                'isClientCredentialsFlowEnabled'    => false,
+                'isCodeCredFlowEnabled'             => false,
+                'isCodeCredPostOnly'                => false,
+                'isConsumerSecretOptional'          => false,
+                'isDeviceFlowEnabled'               => false,
+                'isIntrospectAllTokens'             => false,
+                'isNamedUserJwtEnabled'             => false,
+                'isPkceRequired'                    => true,
+                'isRefreshTokenRotationEnabled'     => false,
+                'isSecretRequiredForRefreshToken'   => true,
+                'isSecretRequiredForTokenExchange'  => true,
+                'isTokenExchangeEnabled'            => false,
+                'shouldRotateConsumerKey'           => false,
+                'shouldRotateConsumerSecret'        => false
+            }
+        )
+        .getXsr()
+    ;
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'ExtlClntAppGlobalOauthSettings')){
+        System.debug(result);
+    }
+
+}catch(soap.Wsdl.SoapApiException e){
+    System.debug(e.getMessage());
+}
+
+
+/**
+ * 09 - CREATE EXTL_CLNT_APP_OAUTH_CONFIGURABLE_POLICIES
+ */
+try{
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
+         .addCredMetadata(
+            'ExtlClntAppOauthConfigurablePolicies',
+            new Map<String,Object>{
+                'fullName'                        	=> appName + '_oauthPlcy',
+                'label'                         	=> appName + '_oauthPlcy',
+                'externalClientApplication'        	=> appName,
+                'commaSeparatedPermissionSet'    	=> appName,
+                'ipRelaxationPolicyType'        	=> 'Enforce',
+                'isClientCredentialsFlowEnabled'	=> false,
+                'isGuestCodeCredFlowEnabled'    	=> false,
+                'isTokenExchangeFlowEnabled'    	=> false,
+                'permittedUsersPolicyType'        	=> 'AdminApprovedPreAuthorized',
+                'refreshTokenPolicyType'        	=> 'SpecificLifetime',
+                'refreshTokenValidityPeriod'    	=> '365',
+                'refreshTokenValidityUnit'        	=> 'Days',
+                'requiredSessionLevel'            	=> 'STANDARD'
+            }
+        )       
+        .getXsr()
+    ;
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'ExtlClntAppOauthConfigurablePolicies')){
+        System.debug(result);
+    }
+
+}catch(soap.Wsdl.SoapApiException e){
+    System.debug(e.getMessage());
+}
+
+
+/**
+ * 10 - READ THE CONNECTED APP ID TO BE USED IN THE NAMED CREDENTIAL
  */
 try{
     XmlStreamReader xsr = new soap.MdtWsdl('readMetadata')
-        .setItemMetadataType('ConnectedApp')
-        .addItemMetadataFullName(appName)
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
+        .setItemMetadataType('ExtlClntAppGlobalOauthSettings')
+        .addItemMetadataFullName(appName + '_glbloauth')
         .getXsr()
     ;
 
@@ -236,16 +317,15 @@ try{
     System.debug(e.getMessage());
 }
 
-
 /**
- * 07 - CREATE EXTERNAL CREDENTIAL
+ * 11 - CREATE EXTERNAL CREDENTIAL
  */
 try{
-    soap.Wsdl createExternalCredentialAction = new soap.MdtWsdl('upsertMetadata')
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
         .addCredMetadata(
             'ExternalCredential',
             new Map<String,Object>{
-                'fullName'		         => appName,
+                'fullName'                 => appName,
                 'label'                  => appLabel,
                 'authenticationProtocol' => 'Oauth',
                 'externalCredentialParameters' => new Object[]{
@@ -345,13 +425,12 @@ try{
                 }
             }
         )
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
-        .call()
-        .handleErrors()
+        .getXsr()
     ;
-
-    System.debug(createExternalCredentialAction.getResponse()?.getBody());
-    System.debug('Successfully upserted External Credential');
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'ExternalCredential')){
+        System.debug(result);
+    }
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -359,14 +438,14 @@ try{
    
 
 /**
- * 08 - CREATE NAMED CREDENTIAL
+ * 12 - CREATE NAMED CREDENTIAL
  */
 try{
-    soap.Wsdl createNamedCredentialAction = new soap.MdtWsdl('upsertMetadata')
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
         .addCredMetadata(
             'NamedCredential',
             new Map<String,Object>{
-                'fullName'		              => appName,
+                'fullName'                    => appName,
                 'label'                       => appLabel,
                 'allowMergeFieldsInBody'      => true,
                 'allowMergeFieldsInHeader'    => true,
@@ -413,13 +492,12 @@ try{
                 }
             }
         )
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
-        .call()
-        .handleErrors()
+        .getXsr()
     ;
-
-    System.debug(createNamedCredentialAction.getResponse()?.getBody());
-    System.debug('Successfully upserted Named Credential');
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'NamedCredential')){
+        System.debug(result);
+    }
     
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -427,35 +505,34 @@ try{
    
 
 /**
- * 09 - UPDATE THE PERMISSION SET WITH EXTERNAL CREDENTIAL ACCESS
+ * 13 - UPDATE THE PERMISSION SET WITH EXTERNAL CREDENTIAL ACCESS
  */
 try{
-    soap.Wsdl updatePermissionSetAction = new soap.MdtWsdl('upsertMetadata')
+    XmlStreamReader xsr = new soap.MdtWsdl('upsertMetadata')
         .addCredMetadata(
             'PermissionSet',
             new Map<String,Object>{
                 'fullName'                              => appName,
                 'label'                                 => appLabel,
-                'description'                           => 'Provides access to the ' + appLabel + ' Connected App',
+                'description'                           => 'Provides access to the ' + appLabel + ' External Client App, Named Credential and External Credential',
                 'externalCredentialPrincipalAccesses'   => new Object[]{
                     new Map<String,Object>{
                         'enabled'                       => true,
-                        'externalCredentialPrincipal'   => ((String.isNotBlank(appNamespace)) ? appNamespace + '__' : '') + appName + '-NAMED_PRINCIPAL'
+                        'externalCredentialPrincipal'   => appName + '-NAMED_PRINCIPAL'
                     },
                     new Map<String,Object>{
                         'enabled'                       => true,
-                        'externalCredentialPrincipal'   => ((String.isNotBlank(appNamespace)) ? appNamespace + '__' : '') + appName + '-PER_USER_PRINCIPAL'
+                        'externalCredentialPrincipal'   => appName + '-PER_USER_PRINCIPAL'
                     }
                 }
             }
         )
-        .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
-        .call()
-        .handleErrors()
+        .getXsr()
     ;
-
-    System.debug(updatePermissionSetAction.getResponse()?.getBody());
-    System.debug('Successfully updated Permission Set');
+    
+    for(soap.Util.MdtCrudResult result : soap.Util.handleMdtCrudResponse(xsr, 'PermissionSet')){
+        System.debug(result);
+    }
 
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -463,7 +540,7 @@ try{
 
 
 /**
- * 10 - ASSIGN PERMISSION SET
+ * 14 - ASSIGN PERMISSION SET
  */
 String permSetId = [SELECT Id FROM PermissionSet WHERE Name = :appName LIMIT 1].Id;
 
@@ -474,12 +551,18 @@ if([SELECT Id FROM PermissionSetAssignment WHERE PermissionSetId = :permSetId AN
         PermissionSetId = permSetId
     );
 
+    System.debug('Inserting new permission set assignment');
+    
 // We can only test a callout to our new endpoint connection if we have the permission set assigned
 // So run the test afterwards, this should work instantly
 }else{
+    
+    System.debug('Permission Set Already exists. Performing test callout:');
+
     HttpRequest req = new HttpRequest();
-    req.setEndpoint('callout:'+ ((String.isNotBlank(appNamespace)) ? appNamespace + '__' : '') + appName+'/services/data');
+    req.setEndpoint('callout:' + appName + '/services/data');
     req.setMethod('GET');
+    req.setHeader('X-PrettyPrint', '1');
     Http http = new Http();
     HttpResponse res = http.send(req);
     System.debug(res.getBody());
@@ -487,17 +570,24 @@ if([SELECT Id FROM PermissionSetAssignment WHERE PermissionSetId = :permSetId AN
 
 
 /**
- * 11 - SEND AND EMAIL TO THE ADMIN TO NOTIFY  A NEW ORG IS READY FOR CONNECTION
+ * 15 - SEND AND EMAIL TO THE ADMIN TO NOTIFY  A NEW ORG IS READY FOR CONNECTION
  */
-Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
-message.setSaveAsActivity(false);
-message.toAddresses   = new String[] { emailRecipient };
-message.subject       = 'New Org Connected - ' + appLabel;
+try{
+    System.debug('Sending Email With External Client App Details...');
 
-// Create the email body
-message.plainTextBody = 'Org domain url: '   + URL.getOrgDomainUrl()  + '\n';
-message.plainTextBody+= 'Connected App Id: ' + connectedAppId         + '\n';
-message.plainTextBody+= 'User name: '        + UserInfo.getUserName();
+    Messaging.SingleEmailMessage message = new Messaging.SingleEmailMessage();
+    message.setSaveAsActivity(false);
+    message.toAddresses   = new String[] { emailRecipient };
+    message.subject       = 'New Org Connected - ' + appLabel;
 
-// Send the messages
-Messaging.SendEmailResult[] results = Messaging.sendEmail(new List<Messaging.SingleEmailMessage> {message});
+    // Create the email body
+    message.plainTextBody = 'Org domain url: '   + URL.getOrgDomainUrl()  + '\n';
+    message.plainTextBody+= 'Connected App Id: ' + connectedAppId         + '\n';
+    message.plainTextBody+= 'User name: '        + UserInfo.getUserName();
+
+    // Send the messages
+    Messaging.SendEmailResult[] results = Messaging.sendEmail(new List<Messaging.SingleEmailMessage> {message});
+
+}catch(System.EmailException e){
+    System.debug('Email error: ' + e.getMessage());
+}
