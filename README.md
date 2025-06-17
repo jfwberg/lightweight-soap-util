@@ -33,9 +33,9 @@ Instead of the running the `Wsdl.call()` method you run the `Wsdl.setupRequest()
 | Info | Value | ||
 |---|---|---|---|
 |Name|Lightweight - Apex SOAP Util ||
-|Version|0.3.0-1||
-|**Managed** | `sf package install --wait 30 --security-type AllUsers --package 04tP30000014Ev3IAE` | [Install in production](https://login.salesforce.com/packaging/installPackage.apexp?mgd=true&p0=04tP30000014Ev3IAE) | [Install in Sandbox](https://login.salesforce.com/packaging/installPackage.apexp?mgd=true&p0=04tP30000014Ev3IAE)|
-|**Unlocked**| `sf package install --wait 30 --security-type AllUsers --package 04tP30000014EwfIAE` | [Install in production](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP30000014EwfIAE)          | [Install in Sandbox](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP30000014EwfIAE)|
+|Version|0.4.0-1||
+|**Managed** | `sf package install --wait 30 --security-type AllUsers --package 04tP3000001HJ8vIAG` | [Install in production](https://login.salesforce.com/packaging/installPackage.apexp?mgd=true&p0=04tP3000001HJ8vIAG) | [Install in Sandbox](https://login.salesforce.com/packaging/installPackage.apexp?mgd=true&p0=04tP3000001HJ8vIAG)|
+|**Unlocked**| `sf package install --wait 30 --security-type AllUsers --package 04tP3000001HJAXIA4` | [Install in production](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP3000001HJAXIA4)          | [Install in Sandbox](https://login.salesforce.com/packaging/installPackage.apexp?p0=04tP3000001HJAXIA4)|
 |Github URL  | https://github.com/jfwberg/lightweight-soap-util        |
 
 ## Basic constructors
@@ -70,12 +70,11 @@ soap.Wsdl soapAction = new soap.ParWsdl('[SOAP_ACTION_NAME]')
     .setupRequest()   // sets up the entire api request but does not execute callout
                       // This allows usage with a custom REST callout frame work (trade off is the potential 
                       // exposure of the session Id when you don't use named credentials)
-;
 
-// Test Method to override the HttpResponse returned by the Http.send() exection
-// in Apex Unit tests for the call() and getXsr() methods. This allows for additional tests
-// by external implementations
-soapAction.setMockResponse(new HttpResponse());
+    // Test Methods
+    .setMockResponse(new HttpResponse());               // Set a mock response that is returned during a test (not adviced to use this method)
+    .setMockResponseIdentifier('[CUSTOM_IDENTIFIER]')   // Calls the mock response that is set in the test class (recommended approach)
+;
 
 // Getter methods
 HttpRequest  request        = soapAction.getRequest();       // The HttpRequest for the SOAP call
@@ -84,8 +83,16 @@ Integer      executionTime  = soapAction.getExecutionTime(); // Time to execute 
 
 // Memory optimization methods that by pass all error handling, don't store any response data
 // and instantly returns the response as an XmlStreamReader class instance returned from the callout.
-// Use this instead of the .call() method when you require a lot of heap space.
+// Use this INSTEAD of the .call() method when you require a lot of heap space.
 XmlStreamReader xsr = soapAction.getXsr();
+
+```
+
+## Static methods
+```java
+// Static method specifically for custom testing purposes
+// Match the [CUSTOM_IDENTIFIER] value with the the one set in setMockResponseIdentifier()
+soap.Wsdl.addNamedMockResponse('[CUSTOM_IDENTIFIER]',200,'[<mockResponse>your data<mockResponse/>]');
 ```
 
 ## Exceptions
@@ -94,10 +101,107 @@ XmlStreamReader xsr = soapAction.getXsr();
 `soap.Wsdl.SoapApiException`  | Exception is thrown when something went wrong when calling a SOAP API. This is thrown only by the the call() and getXsr() methods. The SOAP API only returns status code 500 for any error and 200 for successes. This exception is thrown when the API returns anything else besides 200.|
 `soap.Wsdl.SoapUtilException` | Exception is thrown when something unexpected in the utility happens before executing the actual HTTP callout|
 
-## Error handling diagram
+## Custom Apex Unit Testing
+The methods in the utility are unit tested, but you do require to add additional unit tests for your custom implementation as well.
+This can be done in two different ways. Each SOAP call should only be executed once and therefore each action call has it's own mock response.
+
+### Recommomended approach
+This option is the preferred method: Your main code should not be responsible for Apex unit test data. It also saves on your apex character limit.
+In this method you set the mock response identifier in your main code and configure a matching identifier in your test code. the test code you configure the actual mock response.
+```java
+public class MetadataHandler{
+
+    public static String getConnectedAppCertificate(String fullName){
+        
+        // Set the mock response identifier in your main logic 
+        soap.Wsdl soapResult = new soap.MdtWsdl('readMetadata')
+            .setItemMetadataType('ConnectedApp')
+            .addItemMetadataFullName(fullName)
+            .setMockResponseIdentifier('CONNECTED_APP_RESPONSE')
+            .call()
+            .handleErrors()
+        ;
+
+        return soap.Util.readSingleValue(
+            soapResult.getResponse().getXmlStreamReader(),
+            'certificate'
+        );
+    }
+}
+
+
+@IsTest
+private class MetadataHandlerTest{
+
+    @IsTest
+    static void testCreateConnectedAppMetadata(){
+    
+        // Configure the response identifier with a mock response
+        // in the test method where you need it
+        soap.Wsdl.addNamedMockResponse(
+            'CONNECTED_APP_RESPONSE',
+            200,
+            '<certificate>CERT_DATA</certificate>'
+        );
+
+        // Execute the method we want to test
+        String certificate = MetadataHandler.getConnectedAppCertificate('soap__My_Connected_App');
+
+        // Validate the data is the same
+        Assert.areEqual('CERT_DATA', certificate);
+    }
+}
+```
+
+### Optional approach
+Another option is to set the response directly in the main code. Although handy, it takes up apex character space and makes your main code responsible for test data, what is a bad practice.
+```java
+public class MetadataHandler{
+
+    public static String getConnectedAppCertificate(String fullName){
+        
+        // Response for the test !! Should not really be in main code !!
+        HttpResponse mockResponse = new HttpResponse();
+        mockResponse.setStatusCode(200);
+        mockResponse.setBody('<certificate>CERT_DATA</certificate>');
+        
+        // Set the mock response identifier in your main logic 
+        soap.Wsdl soapResult = new soap.MdtWsdl('readMetadata')
+            .setItemMetadataType('ConnectedApp')
+            .addItemMetadataFullName(fullName)
+            .setMockResponse(mockResponse)
+            .call()
+            .handleErrors()
+        ;
+
+        return soap.Util.readSingleValue(
+            soapResult.getResponse().getXmlStreamReader(),
+            'certificate'
+        );
+    }
+}
+
+@IsTest
+private class MetadataHandlerTest{
+
+    @IsTest
+    static void testCreateConnectedAppMetadata(){
+    
+        // Execute the method we want to test
+        String certificate = MetadataHandler.getConnectedAppCertificate('soap__My_Connected_App');
+
+        // Validate the data is the same
+        Assert.areEqual('CERT_DATA', certificate);
+    }
+}
+```
+
+## Default error handling diagram
 If you choose to use the `handleErrors()` methods an soap.Wsdl.SoapApiException will be thrown. The following diagram shows how this error handling works:
 ![Salesforce SOAP API Error Handling Diagram](media/soap-api-error-handling-diagram.png "Salesforce SOAP API Error Handling Diagram")
 
+
+ 
 
 ## Metadata API Methods
 ```java
@@ -240,8 +344,6 @@ soap.Wsdl loAction = new soap.ParWsdl('logout')
 
 ## Apex API
 ```java
-
-
 soap.Wsdl eaAction = new soap.ApxWsdl('executeAnonymous')
     .setLogLevel('DEBUG')
     .setLogCategory('APEX_CODE')
@@ -266,5 +368,48 @@ soap.Wsdl ctAction = new soap.ApxWsdl('compileTriggers')
     .addScript('trigger MySecondRandomUserTrigger on User(before update){}')
     .call()
 ;
-
 ```
+
+## Utility Methods
+|Return Type|Method Name| Description|
+|----|----|----|
+|`String`                   |`soap.Util.readSingleValue(XmlStreamReader xsr, String tagName)`                                  |Method to get the value of a single tag. Only the first (text) value of a tag will be returned|
+|`String`                   |`soap.Util.getNamespacedMetadataName(String fullName)`                                            |Appends the ORG namespace. Use this in namespaced scratch orgs or 1GP developer orgs|
+|`String`                   |`soap.Util.getNamespacedMetadataName(String fullName, String namespaceName)`                      |Appends a custom namespace to the metadata name. Use this when referencing metadata that is part of namespaced packages|
+|`String`                   |`readSingleValue(XmlStreamReader xsr, String tagName)`                                            |Fetches a single value from an element the XML response. If multiple values are present, only the first is returned|
+|`Map<String,String>`       |`readSingleValueOnList(XmlStreamReader xsr, String parentElement, String tagName)`                |Fetches a single value from a list of parent elements. If a parent element contains multiple child elements, only the first is returned|
+|`Map<String,String>`       |`readMultipleValues(XmlStreamReader xsr, Set<String> tagNames)`                                   |Fetches multiple values from the XML response. Only the first values will be returned if multiple exist|
+|`List<Map<String,String>>` |`readMultipleValuesOnList(XmlStreamReader xsr, String parentElement, Set<String> tagNames)`       |Fetches multiple values from a list of parenet elements. If a child elements contains duplicate elements, only the first is returned|
+|`MdtCrudResult[]`          |`handleMdtCrudResponse(XmlStreamReader xsr, String metadataType)`                                 |Converts a Metadata API CRUD response into a usable object that holds the results|
+|`Map<String,String>`       |`getFullNameIdMapFromMetadataListResult(XmlStreamReader xsr)`                                     |Creates a fullName(key) / Id (value) map from a listMetadata response. Usefull for metadata picklists|
+|`Map<String,String>`       |`getKeyValueMapForElement(XmlStreamReader xsr, String tagName, String keyTag, String valueTag)`   |Creates a key/value maps for a list of child elements with a custom defined field for the key and the value|
+
+## Utility Classes
+### soap.Util.MdtCrudResult
+A class representation of a CRUD soap action result
+```java
+global class MdtCrudResult{
+    @AuraEnabled
+    global String fullname;
+
+    @AuraEnabled
+    global String type;
+
+    @AuraEnabled
+    global String errorMessage;
+
+    @AuraEnabled
+    global Boolean created;
+
+    @AuraEnabled
+    global Boolean success;
+
+    /**
+     * @description Main constructor
+     * @param type  The metadata type the CRUD is applied to
+     */
+    global MdtCrudResult(String type){
+        this.type = type;
+    }
+}
+```   

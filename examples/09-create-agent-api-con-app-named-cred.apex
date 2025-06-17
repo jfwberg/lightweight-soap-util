@@ -27,16 +27,16 @@ String appName      = 'Agent_Api_v1';
 String appLabel     = 'Agent Api v1';
 
 /* STEP 02 */
-//setupConnectedApp();
+// setupConnectedApp();
 
 /* STEP 03 */
 // System.debug(getConnectedAppEditPolicyPageUrl(appName, appLabel));
 
 /* STEP 05 */
-//setupNamedCredential();
+// setupNamedCredential();
 
 /* STEP 06 */
-//testJwtAsBearer();
+// testJwtAsBearer();
 
 /** *********************************************************************** **
  *                              SETUP METHODS
@@ -80,7 +80,7 @@ void upsertCertificate(String appName, String appLabel){
                 new Map<String,Object>{
                     'fullName'             => appName,
                     'caSigned'             => false,
-                    'expirationDate'       => String.valueOf(Datetime.now().addYears(2).format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')),
+                    'expirationDate'       => Datetime.now().addYears(2).format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'').toString(),
                     'keySize'              => 4096,
                     'privateKeyExportable' => true,
                     'masterLabel'          => appLabel

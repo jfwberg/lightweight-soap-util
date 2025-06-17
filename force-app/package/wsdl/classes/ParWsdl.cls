@@ -1,7 +1,7 @@
 /**
 * @author         Justus van den Berg (jfwberg@gmail.com)
 * @date           November 2024
-* @copyright      (c) 2024 Justus van den Berg
+* @copyright      (c) 2025 Justus van den Berg
 * @license        MIT (See LICENSE file in the project root)
 * @description    Class that contains a set of Salesforce SOAP API  Utilities
 * @note           This class is to be used in a managed package and contains Global methods that
@@ -9,7 +9,7 @@
 *                 packages.
 *                 Can be modified to make smaller in your own implementation
 */
-@SuppressWarnings('PMD.AvoidGlobalModifier, PMD.EmptyStatementBlock')
+@SuppressWarnings('PMD.AvoidGlobalModifier, PMD.EmptyStatementBlock, PMD.ApexDoc')
 global with sharing class ParWsdl extends Wsdl implements Wsdl.IWsdl{
 
     /** **************************************************************************************************** **

@@ -58,7 +58,7 @@ try{
             new Map<String,Object>{
                 'fullName'		       => appName,
                 'caSigned'             => false,
-                'expirationDate'       => String.valueOf(Datetime.now().addYears(2).format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')),
+                'expirationDate'       => Datetime.now().addYears(2).format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'').toString(),
                 'keySize'              => 4096,
                 'privateKeyExportable' => true,
                 'masterLabel'          => appLabel
@@ -142,21 +142,9 @@ try{
         .getXsr()
     ;
     
-    // Stream throught the XML Elements and handle accordingly
-    while(xsr.hasNext()){
-        if(xsr.getEventType()==XmlTag.START_ELEMENT){
-            if(xsr.getLocalName() == 'content'){
-                xsr.next();
-                if(xsr.getEventType() == XmlTag.CHARACTERS){
-                    certificateContent = xsr.getText();
-                break;
-                }
-            }
-        }
-        xsr.next();
-    }
+    certificateContent = soap.Util.readSingleValue(xsr, 'content');
 
-    System.debug('Successfully read the Certificate content');
+    System.debug('Successfully read the Certificate content:' + certificateContent?.length());
     
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
@@ -239,21 +227,9 @@ try{
         .setDefaultNamespace(appNamespace) // Only required for namespaced scratch orgs or working with packages
         .getXsr()
     ;
-    
-    // Stream throught the XML Elements and handle accordingly
-    while(xsr.hasNext()){
-        if(xsr.getEventType()==XmlTag.START_ELEMENT){
-            if(xsr.getLocalName() == 'consumerKey'){
-                xsr.next();
-                if(xsr.getEventType() == XmlTag.CHARACTERS){
-                    connectedAppId = xsr.getText();
-                break;
-                }
-            }
-        }
-        xsr.next();
-    }
 
+    connectedAppId = soap.Util.readSingleValue(xsr, 'consumerKey');
+    
     System.debug('Successfully read the Connected App Id:' + connectedAppId);
 
 }catch(soap.Wsdl.SoapApiException e){

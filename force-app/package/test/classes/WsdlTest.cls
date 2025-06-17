@@ -1,7 +1,7 @@
 /**
  * @author         Justus van den Berg (jfwberg@gmail.com)
  * @date           November 2024
- * @copyright      (c) 2024 Justus van den Berg
+ * @copyright      (c) 2025 Justus van den Berg
  * @license        MIT (See LICENSE file in the project root)
  * @description    Test class for the Wsdl class
  */
@@ -9,7 +9,7 @@
 private with sharing class WsdlTest {
     
     @IsTest
-    private static void testHandleErrorsNoErrors() {
+    static void testHandleErrorsNoErrors() {
         
         // Create a new response for testing
         HttpResponse res = new HttpResponse();
@@ -21,65 +21,66 @@ private with sharing class WsdlTest {
         // Start the test
         Test.startTest();
          
-        // Create the wsdl
-        Wsdl wsdl = new MdtWsdl('readMetadata')
+        // Create the soapActionResult
+        Wsdl soapActionResult = new MdtWsdl('readMetadata')
             .setItemMetadataType('CustomObjects')
             .addItemMetadataFullName('User')
             .setMockResponse(res)
             .call()
         ;
 
-        // Validate that the returned wsdl is the same as the input Wsdl
-        Wsdl errorHandlerResponseWsdl = Wsdl.handleErrors();
+        // Validate that the returned soapActionResult is the same as the input Wsdl
+        Wsdl errorHandlerResponseWsdl = soapActionResult.handleErrors();
 
         Test.stopTest();
 
         // Handle assertions
         Assert.areEqual(
-            wsdl,
+            soapActionResult,
             errorHandlerResponseWsdl,
-            'Unexpected exception message'
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }
     
 
     @IsTest
-    private static void testHandleErrorsCodeCoverage() {
+    static void testHandleErrorsCodeCoverage() {
         
         // Create a new response for testing
         HttpResponse res = new HttpResponse();
         
-        // Set the status to 999 specifically to hit code coverage and validate evrything is ignored
+        // Set the status to 999 specifically to hit code coverage and validate all other
+        // statements are ignored
         res.setStatusCode(999);
         res.setBody('<all>Good</all>');
 
         // Start the test
         Test.startTest();
          
-        // Create the wsdl
-        Wsdl wsdl = new MdtWsdl('readMetadata')
+        // Create the soapActionResult
+        Wsdl soapActionResult = new MdtWsdl('readMetadata')
             .setItemMetadataType('CustomObjects')
             .addItemMetadataFullName('User')
             .setMockResponse(res)
             .call()
         ;
 
-        // Validate that the returned wsdl is the same as the input Wsdl
-        Wsdl errorHandlerResponseWsdl = Wsdl.handleErrors();
+        // Validate that the returned soapActionResult is the same as the input Wsdl
+        Wsdl errorHandlerResponseWsdl = soapActionResult.handleErrors();
 
         Test.stopTest();
 
         // Handle assertions
         Assert.areEqual(
-            wsdl,
+            soapActionResult,
             errorHandlerResponseWsdl,
-            'Unexpected exception message'
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }  
 
 
     @IsTest
-    private static void testHandleErrorsEmptyResponseBody() {
+    static void testHandleErrorsEmptyResponseBody() {
         
         // Assertion variables
         Wsdl.SoapApiException exceptionToAssert;
@@ -93,8 +94,8 @@ private with sharing class WsdlTest {
         // Start the test
         Test.startTest();         
         try{
-            // Create the wsdl
-            Wsdl wsdl = new MdtWsdl('readMetadata')
+            // Create the soapActionResult
+            new MdtWsdl('readMetadata')
                 .setItemMetadataType('CustomObjects')
                 .addItemMetadataFullName('User')
                 .setMockResponse(res)
@@ -103,7 +104,7 @@ private with sharing class WsdlTest {
             ;
 
             // Safeguard
-            throw new StringException('This part of the test should not be reached: An exception should have been thrown');
+            throw new StringException(Wsdl.MSG_TEST_EXCEPTION_SAFEGUARD);
 
         }catch(Wsdl.SoapApiException e){
             exceptionToAssert = e;
@@ -114,13 +115,13 @@ private with sharing class WsdlTest {
         Assert.areEqual(
             Wsdl.MSG_HTTP_CALLOUT_ISSUE,
             exceptionToAssert.getMessage(),
-            'Unexpected exception message'
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }  
 
 
     @IsTest
-    private static void testHandleErrorsInvalidResponseCode() {
+    static void testHandleErrorsInvalidResponseCode() {
         
         // Assertion variables
         Wsdl.SoapApiException exceptionToAssert;
@@ -136,8 +137,8 @@ private with sharing class WsdlTest {
         Test.startTest();
         try{
             
-            // Create the wsdl
-            Wsdl wsdl = new MdtWsdl('readMetadata')
+            // Create the soapActionResult
+            new MdtWsdl('readMetadata')
                 .setItemMetadataType('CustomObjects')
                 .addItemMetadataFullName('User')
                 .setMockResponse(res)
@@ -146,7 +147,7 @@ private with sharing class WsdlTest {
             ;
             
             // Safeguard
-            throw new StringException('This part of the test should not be reached: An exception should have been thrown');
+            throw new StringException(Wsdl.MSG_TEST_EXCEPTION_SAFEGUARD);
 
         }catch(Wsdl.SoapApiException e){
             exceptionToAssert = e;
@@ -157,13 +158,13 @@ private with sharing class WsdlTest {
         Assert.areEqual(
             String.format(Wsdl.MSG_UNKNOWN_HTTP_STATUS_CODE,new String[]{'401','Unexpected response code body content'}),
             exceptionToAssert.getMessage(),
-            'Unexpected exception message'
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }   
 
 
     @IsTest
-    private static void testHandleErrorsInvalidXml() {
+    static void testHandleErrorsInvalidXml() {
         
         // Assertion variables
         Wsdl.SoapApiException exceptionToAssert;
@@ -179,8 +180,8 @@ private with sharing class WsdlTest {
         Test.startTest();
         try{
             
-            // Create the wsdl
-            Wsdl wsdl = new MdtWsdl('readMetadata')
+            // Create the soapActionResult
+            new MdtWsdl('readMetadata')
                 .setItemMetadataType('CustomObjects')
                 .addItemMetadataFullName('User')
                 .setMockResponse(res)
@@ -189,7 +190,7 @@ private with sharing class WsdlTest {
             ;
             
             // Safeguard
-            throw new StringException('This part of the test should not be reached: An exception should have been thrown');
+            throw new StringException(Wsdl.MSG_TEST_EXCEPTION_SAFEGUARD);
 
         }catch(Wsdl.SoapApiException e){
             exceptionToAssert = e;
@@ -199,13 +200,13 @@ private with sharing class WsdlTest {
         // Handle assertions
         Assert.isTrue(
             exceptionToAssert.getMessage().startsWith(Wsdl.MSG_INVALID_XML_RESPONSE.substringBefore('{0}')),
-            'Unexpected exception message'
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }   
 
 
     @IsTest
-    private static void testHandleErrorsUnknownErrorResponse(){
+    static void testHandleErrorsUnknownErrorResponse(){
         
         // Assertion variables
         Wsdl.SoapApiException exceptionToAssert;
@@ -221,8 +222,8 @@ private with sharing class WsdlTest {
         Test.startTest();
         try{
             
-            // Create the wsdl
-            Wsdl wsdl = new MdtWsdl('readMetadata')
+            // Create the soapActionResult
+            new MdtWsdl('readMetadata')
                 .setItemMetadataType('CustomObjects')
                 .addItemMetadataFullName('User')
                 .setMockResponse(res)
@@ -231,7 +232,7 @@ private with sharing class WsdlTest {
             ;
             
             // Safeguard
-            throw new StringException('This part of the test should not be reached: An exception should have been thrown');
+            throw new StringException(Wsdl.MSG_TEST_EXCEPTION_SAFEGUARD);
 
         }catch(Wsdl.SoapApiException e){
             exceptionToAssert = e;
@@ -242,13 +243,13 @@ private with sharing class WsdlTest {
         Assert.areEqual(
             String.format(Wsdl.MSG_UNKNOWN_ERROR_RESPONSE,new String[]{'<error>Unknown Error</error>'}),
             exceptionToAssert.getMessage(),
-            'Unexpected exception message'
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }   
 
 
     @IsTest
-    private static void testHandleErrorsExpectedErrorResponse(){
+    static void testHandleErrorsExpectedErrorResponse(){
         
         // Assertion variables
         Wsdl.SoapApiException exceptionToAssert;
@@ -264,8 +265,8 @@ private with sharing class WsdlTest {
         Test.startTest();
         try{
             
-            // Create the wsdl
-            Wsdl wsdl = new MdtWsdl('readMetadata')
+            // Create the soapActionResult
+            new MdtWsdl('readMetadata')
                 .setItemMetadataType('CustomObjects')
                 .addItemMetadataFullName('User')
                 .setMockResponse(res)
@@ -274,7 +275,7 @@ private with sharing class WsdlTest {
             ;
             
             // Safeguard
-            throw new StringException('This part of the test should not be reached: An exception should have been thrown');
+            throw new StringException(Wsdl.MSG_TEST_EXCEPTION_SAFEGUARD);
 
         }catch(Wsdl.SoapApiException e){
             exceptionToAssert = e;
@@ -285,13 +286,13 @@ private with sharing class WsdlTest {
         Assert.areEqual(
             String.format('{0} :: {1}',new String[]{'INVALID_LOGIN','INVALID_LOGIN: Invalid username, password, security token; or user locked out.'}),
             exceptionToAssert.getMessage(),
-            'Unexpected exception message'
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }
 
 
     @IsTest
-    private static void testGetXsr(){
+    static void testGetXsr(){
         
         // Variables to assert
         String faultToAssert;
@@ -306,12 +307,11 @@ private with sharing class WsdlTest {
         res.setStatusCode(500);
         res.setBody(responseBody);
         
-
         // Start the test
         Test.startTest();
 
         // Read metadata example: get the data for the User Object
-        Wsdl wsdl = new MdtWsdl('readMetadata')
+        Wsdl soapActionResult = new MdtWsdl('readMetadata')
             .setItemMetadataType('CustomObject')
             .addItemMetadataFullName('User')
             .setMockResponse(res)
@@ -319,7 +319,7 @@ private with sharing class WsdlTest {
         ;
 
         // Execute through reader
-        XmlStreamReader xsr = wsdl.getXsr(); 
+        XmlStreamReader xsr = soapActionResult.getXsr(); 
 
         // Stream throught the XML Elements and handle accordingly
         while(xsr.hasNext()){
@@ -343,15 +343,142 @@ private with sharing class WsdlTest {
 
         // Check the execution time is set for the getXsr()
         Assert.isTrue(
-            wsdl.getExecutionTime() > -1,
+            soapActionResult.getExecutionTime() > -1,
             'Unexpected execution time'
         );
 
         // There should be no response body stored for this method
         Assert.areEqual(
             null,
-            wsdl.getResponse(),
-            'Unexpected resposne Body'
+            soapActionResult.getResponse(),
+            'Unexpected response Body'
+        );
+    }
+
+
+    @IsTest
+    static void testMockResponses(){
+
+        // Add response
+        Wsdl.addNamedMockResponse(
+            'TEST_MOCK_ID',
+            200,
+            'TEST_MOCK_DATA'
+        );
+
+        // Create the soapActionResult
+        Wsdl soapActionResult = new MdtWsdl('readMetadata')
+            .setItemMetadataType('CustomObjects')
+            .addItemMetadataFullName('User')
+            .setMockResponseIdentifier('TEST_MOCK_ID')
+            .call()
+            .handleErrors()
+        ;
+
+        // Validate response
+        Assert.areEqual(200,              soapActionResult.getResponse().getStatusCode(), 'Invalid status code'  );
+        Assert.areEqual('TEST_MOCK_DATA', soapActionResult.getResponse().getBody(),       'Invalid response body');
+    }
+
+
+    @IsTest
+    static void testMockResponseWithInvalidMockId(){
+        
+        // Assertion variables
+        Wsdl.SoapUtilException exceptionToAssert;
+
+        // Start the test
+        Test.startTest();
+        try{
+            // Create the soapActionResult
+            new MdtWsdl('readMetadata')
+                .setItemMetadataType('CustomObjects')
+                .addItemMetadataFullName('User')
+                .setMockResponseIdentifier('TEST_MOCK_ID')
+                .call()
+                .handleErrors()
+            ;
+
+            // Safeguard
+            throw new StringException(Wsdl.MSG_TEST_EXCEPTION_SAFEGUARD);
+
+        }catch(Wsdl.SoapUtilException e){
+            exceptionToAssert = e;
+        }
+        Test.stopTest();
+
+        // Assert
+        Assert.areEqual(
+            String.format(
+                Wsdl.MSG_INVALID_MOCK_RESPONSE_ID,
+                new String[]{'TEST_MOCK_ID'}
+            ),
+            exceptionToAssert.getMessage(),
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
+        );
+    }
+
+
+    @IsTest
+    static void testXsrMockResponse(){
+
+        // Add response
+        Wsdl.addNamedMockResponse(
+            'TEST_MOCK_ID',
+            200,
+            '<data>TEST_MOCK_DATA</data>'
+        );
+
+        // Create the soapActionResult
+        XmlStreamReader xsr = new MdtWsdl('readMetadata')
+            .setItemMetadataType('CustomObjects')
+            .addItemMetadataFullName('User')
+            .setMockResponseIdentifier('TEST_MOCK_ID')
+            .getXsr()
+        ;
+
+        // Skip to the data contents
+        xsr.next(); // <data>
+        xsr.next(); // TEST_MOCK_DATA
+
+        // Validate response
+        Assert.areEqual('TEST_MOCK_DATA', xsr.getText(), 'Invalid response body');
+    }
+
+
+    @IsTest
+    static void testXsrMockResponseWithInvalidMockId(){
+        
+        // Assertion variables
+        Wsdl.SoapUtilException exceptionToAssert;
+
+        // Start the test
+        Test.startTest();
+        try{
+            // Create the soapActionResult
+            new MdtWsdl('readMetadata')
+                .setItemMetadataType('CustomObjects')
+                .addItemMetadataFullName('User')
+                .setMockResponseIdentifier('TEST_MOCK_ID')
+                .getXsr()
+            ;
+
+            // Safeguard
+            throw new StringException(Wsdl.MSG_TEST_EXCEPTION_SAFEGUARD);
+
+        }catch(Wsdl.SoapUtilException e){
+            exceptionToAssert = e;
+        }
+        Test.stopTest();
+
+        // Assert
+        Assert.areEqual(
+            String.format(
+                Wsdl.MSG_INVALID_MOCK_RESPONSE_ID,
+                new String[]{'TEST_MOCK_ID'}
+            ),
+            exceptionToAssert.getMessage(),
+            Wsdl.MSG_TEST_UNEXPECTED_EXCEPTION
         );
     }
 }

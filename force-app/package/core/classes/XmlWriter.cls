@@ -1,11 +1,11 @@
 /**
  * @author         Justus van den Berg (jfwberg@gmail.com)
  * @date           November 2024
- * @copyright      (c) 2024 Justus van den Berg
+ * @copyright      (c) 2025 Justus van den Berg
  * @license        MIT (See LICENSE file in the project root)
  * @description    Class that contains a set of XML Writing  Utilities for the SOAP API
  */
-@SuppressWarnings('PMD.CognitiveComplexity, PMD.OneDeclarationPerLine, PMD.ExcessiveParameterList')
+@SuppressWarnings('PMD.CognitiveComplexity, PMD.OneDeclarationPerLine, PMD.ExcessiveParameterList, PMD.ApexDoc')
 public with sharing class XmlWriter {
 
     /** **************************************************************************************************** **
@@ -280,7 +280,7 @@ public with sharing class XmlWriter {
             // Actual value, not a map or a list, write the value
             }else{
                 w.writeStartElement(namespacePrefix, mapKey, namespaceUri);
-                w.writeCharacters((objectMap.get(mapKey) != null) ? String.valueOf(objectMap.get(mapKey)) : '' );
+                w.writeCharacters(objectMap.get(mapKey)?.toString() ?? '');
                 w.writeEndElement();
             }
         }
@@ -309,7 +309,7 @@ public with sharing class XmlWriter {
 
             // Actual value, not a map or a list, write the value
             }else{
-                w.writeCharacters( (objectList[i] != null) ? String.valueOf(objectList[i]) : '' );
+                w.writeCharacters(objectList[i]?.toString() ?? '');
             }
             w.writeEndElement();
         }

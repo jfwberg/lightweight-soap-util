@@ -46,32 +46,22 @@ try{
     XmlStreamReader xsr = new soap.MdtWsdl('readMetadata')
         .setItemMetadataType('Profile')
         .addItemMetadataFullName('Admin')
-        .setDefaultNamespace('soap')
         .getXsr()
     ;
 
-    // Stream throught the XML Elements and handle accordingly
-    while(xsr.hasNext()){
-        switch on xsr.getEventType() {
-            when  START_ELEMENT{
-                switch on xsr.getLocalName() {
-                    when 'startAddress'{
-                        xsr.next();
-                        if(xsr.getEventType() == XmlTag.CHARACTERS){
-                            System.debug('Start Address: ' + xsr.getText());
-                        }
-                    }
-                    when 'endAddress' {
-                        xsr.next();
-                        if(xsr.getEventType() == XmlTag.CHARACTERS){
-                            System.debug('End Address: ' + xsr.getText());
-                        }
-                    }
-                }
-            }
+    List<Map<String,String>> values = soap.Util.readMultipleValuesOnList(
+        xsr,
+        'loginIpRanges',
+        new Set<String>{
+            'startAddress',
+            'endAddress',
+            'description'
         }
-        xsr.next();
-    }
+    );
+
+    System.debug(JSON.serializePretty(values));
+   
+   
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
 }

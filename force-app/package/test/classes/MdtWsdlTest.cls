@@ -1,12 +1,12 @@
 /**
  * @author         Justus van den Berg (jfwberg@gmail.com)
  * @date           November 2024
- * @copyright      (c) 2024 Justus van den Berg
+ * @copyright      (c) 2025 Justus van den Berg
  * @license        MIT (See LICENSE file in the project root)
  * @description    Test class for the Metadata Wsdl class
  */
 @IsTest
-@SuppressWarnings('PMD.ApexAssertionsShouldIncludeMessage')
+@SuppressWarnings('PMD.ApexAssertionsShouldIncludeMessage, PMD.ApexDoc')
 private with sharing class MdtWsdlTest {
 
     /**

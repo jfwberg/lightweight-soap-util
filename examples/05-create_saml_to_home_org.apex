@@ -55,7 +55,7 @@ try{
             new Map<String,Object>{
                 'fullName'		       => appName,
                 'caSigned'             => false,
-                'expirationDate'       => String.valueOf(Datetime.now().addYears(2).format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'')),
+                'expirationDate'       => Datetime.now().addYears(2).format('yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'').toString(),
                 'keySize'              => 4096,
                 'privateKeyExportable' => true,
                 'masterLabel'          => appLabel
@@ -79,7 +79,7 @@ try{
 HttpRequest req = new HttpRequest();
     
 // Query the certificate Id using the newly created named credential and the tooling API
-req.setEndpoint('callout:'+appNamespace+appName+'/services/data/v63.0/tooling/query?q=SELECT+Id+FROM+Certificate+WHERE+DeveloperName=\''+appName+'\'+LIMIT+1');
+req.setEndpoint('callout:'+appNamespace+appName+'/services/data/v64.0/tooling/query?q=SELECT+Id+FROM+Certificate+WHERE+DeveloperName=\''+appName+'\'+LIMIT+1');
 req.setMethod('GET');
 
 // Parse the records result and fetch the records
@@ -87,7 +87,7 @@ Object[] records = (Object[])((Map<String,Object>)JSON.deserializeUntyped(new Ht
 
 // Check if there is a record and assign the correct Id
 if(records.size() ==1){
-    requestSigningCertId = String.valueOf(((Map<String,Object>)records[0]).get('Id')).substring(0,15);
+    requestSigningCertId = ((Map<String,Object>)records[0]).get('Id')?.toString().substring(0,15);
 }
    
 
@@ -137,37 +137,18 @@ try{
         .setDefaultNamespace('soap')
         .getXsr()
     ;
-    
-    // Stream throught the XML Elements and handle accordingly
-    while(xsr.hasNext()){
-        if(xsr.getEventType()==XmlTag.START_ELEMENT){
-            
-            if(xsr.getLocalName() == 'salesforceLoginUrl'){
-                xsr.next();
-                if(xsr.getEventType() == XmlTag.CHARACTERS){
-                    salesforceLoginUrl = xsr.getText();
-                    
-                    // Only break of both values have been populated
-                    if(!String.isBlank(oauthTokenEndpoint)){
-                        break;
-                    }
-                }
-            }
 
-            if(xsr.getLocalName() == 'oauthTokenEndpoint'){
-                xsr.next();
-                if(xsr.getEventType() == XmlTag.CHARACTERS){
-                    oauthTokenEndpoint = xsr.getText();
-                    
-                    // Only break of both values have been populated
-                    if(!String.isBlank(salesforceLoginUrl)){
-                        break;
-                    }
-                }
-            }
+    Map<String,String> values = soap.Util.readMultipleValues(
+        xsr,
+        new Set<String>{
+            'salesforceLoginUrl',
+            'oauthTokenEndpoint'
         }
-        xsr.next();
-    }
+    );
+
+    salesforceLoginUrl = values.get('salesforceLoginUrl');
+    oauthTokenEndpoint = values.get('oauthTokenEndpoint');
+    
 }catch(soap.Wsdl.SoapApiException e){
     System.debug(e.getMessage());
 }

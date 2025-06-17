@@ -1,7 +1,7 @@
 /**
  * @author         Justus van den Berg (jfwberg@gmail.com)
  * @date           November 2024
- * @copyright      (c) 2024 Justus van den Berg
+ * @copyright      (c) 2025 Justus van den Berg
  * @license        MIT (See LICENSE file in the project root)
  * @description    Class that contains a set of Salesforce SOAP API  Utilities
  * @note           This class is to be used in a managed package and contains Global methods that
@@ -9,7 +9,8 @@
  *                 packages.
  *                 Can be modified to make smaller in your own implementation
  */
-@SuppressWarnings('PMD.AvoidGlobalModifier, PMD.EmptyStatementBlock, PMD.TooManyFields, PMD.CyclomaticComplexity, PMD.ExcessivePublicCount, PMD.ApexSuggestUsingNamedCred, PMD.ApexDoc')
+@JsonAccess(serializable='never' deserializable='never')
+@SuppressWarnings('PMD.AvoidGlobalModifier, PMD.EmptyStatementBlock, PMD.TooManyFields, PMD.CyclomaticComplexity, PMD.ExcessivePublicCount, PMD.ApexSuggestUsingNamedCred, PMD.ApexDoc, PMD.CognitiveComplexity')
 global virtual with sharing class Wsdl {
 
     /** **************************************************************************************************** **
@@ -23,13 +24,16 @@ global virtual with sharing class Wsdl {
 
     // The Bearer token (Session Id for Salesforce API)
     // Transient to remove any secret data during serialization
-    private transient String  bearerToken;
+    private transient String bearerToken;
 
     // Default API Configuration
-    private String apiVersion = 'v63.0';
+    private String apiVersion = Constant.VAL_DEFAULT_API_VERSION;
 
     // Set the default time out to the maximum amount
-    private Integer timeout = 120000;
+    private Integer timeout   = Constant.VAL_DEFAULT_API_TIMEOUT;
+
+    // An custom identifier to specify what mock to use in Apex Unit Tests
+    private String mockResponseIdentifier;
 
     // The HTTP Request that is going to be send and the returned response
     // Transient to remove any secret data during serialization
@@ -63,29 +67,23 @@ global virtual with sharing class Wsdl {
     private Map<String, String> soapActionMap;
 
     // Map for holding the different soap header elements, populated by the XML Writer
-    private Map<String,Object> soapHeaderMap = new Map<String,Object>();
+    private Map<String,Object> soapHeaderMap      = new Map<String,Object>();
 
     // Map holding different soap namespaces, populated by the XML Writer
     private Map<String,String> namespaceHeaderMap = new Map<String,String>();
 
 
     /** **************************************************************************************************** **
+     **                                      PRIVATE STATIC VARIABLES                                        **
+     ** **************************************************************************************************** **/
+    // Map that contains the mock response that are specified using a 
+    // name as identifier. Used with the set NamedMockResponse
+    private static Map<String, HttpResponse> namedMockResponses = new Map<String, HttpResponse>();
+
+
+    /** **************************************************************************************************** **
      **                                          PRIVATE CONSTANTS                                           **
      ** **************************************************************************************************** **/
-    // Standard Salesforce API format like v63.0
-    private static final String VAL_API_VERSION           = '[v]\\d\\d[.][0]';
-
-    // SOAP Api setup variables
-    private static final String VAL_DEFAULT_API_VERSION   = 'v63.0';
-
-    // Execution contexts that use the lightning session id instead of the standard session id
-    // AURA for Lightning Web Components and INVOCABLE_ACTION for Agentforce actions
-    // Using a name credential for your connection is still the recommended approach
-    private static final Set<Quiddity> LIGHTNING_CONTEXTS = new Set<Quiddity>{
-        Quiddity.AURA,
-        Quiddity.INVOCABLE_ACTION
-    };
-
     // Merge variable when using the API with a named credentials
     @TestVisible private static final String VAL_NC_TOKEN_MERGE_VARIABLE        = '{!$Credential.OAuthToken}';
 
@@ -97,12 +95,17 @@ global virtual with sharing class Wsdl {
     @TestVisible private static final String MSG_INVALID_SOAP_ACTION            = 'Invalid SOAP ACTION specified';
     @TestVisible private static final String MSG_INVALID_MY_DOMAIN_URL          = 'Invalid My Domain URL format: Urls should start with "https://" and end with ".my.salesforce.com"';
     @TestVisible private static final String MSG_HTTP_CALLOUT_ISSUE             = 'HTTP Response is null. There either was an error during Http Callout or the call() or getXsr() methods have not executed yet';
+    @TestVisible private static final String MSG_INVALID_MOCK_RESPONSE_ID       = 'Invalid mock response identifier "{0}"';
 
     // SOAP Api Error Messages
     @TestVisible private static final String MSG_UNKNOWN_HTTP_STATUS_CODE       = 'The SOAP API returned an unknown HTTP Status code. Http Status Code: "{0}". Response body: {1}';
     @TestVisible private static final String MSG_EMPTY_RESPONSE_BODY            = 'The SOAP API response body is empty';
     @TestVisible private static final String MSG_INVALID_XML_RESPONSE           = 'The SOAP API response body is invalid XML. XmlException Message: {0}';
     @TestVisible private static final String MSG_UNKNOWN_ERROR_RESPONSE         = 'The SOAP API returned an unknown error response body. Response body: {0}';
+    
+    // Test Messages
+    @TestVisible private static final String MSG_TEST_UNEXPECTED_EXCEPTION      = 'Unexpected exception message';
+    @TestVisible private static final String MSG_TEST_EXCEPTION_SAFEGUARD       = 'This part of the test should not be reached: An exception should have been thrown';
 
 
     /** **************************************************************************************************** **
@@ -192,11 +195,11 @@ global virtual with sharing class Wsdl {
     global Wsdl setApiVersion(String apiVersion){
 
         // Validate the API version has the expected format
-        if(String.isBlank(apiVersion) || !Pattern.matches(Wsdl.VAL_API_VERSION, apiVersion)){
+        if(String.isBlank(apiVersion) || !Pattern.matches(Constant.VAL_API_VERSION_PATTERN, apiVersion)){
             throw new SoapUtilException(
                 String.format(
                     Wsdl.MSG_API_INVALID_API_VERSION_FORMAT,
-                    new String[]{Wsdl.VAL_DEFAULT_API_VERSION}
+                    new String[]{Constant.VAL_DEFAULT_API_VERSION}
                 )
             );
         }
@@ -259,9 +262,27 @@ global virtual with sharing class Wsdl {
      *    @return         self
      */
     global Wsdl setMockResponse(HttpResponse mockResponse){
+        
         // Added a new HttpResponse in case of accidental null input
         // throwing null pointer exceptions for arguments
         this.mockResponse = mockResponse ?? new HttpResponse();
+        
+        return this;
+    }
+
+
+    /**
+     *    @description  Setter method to initiate the mockResponse object
+     *    @param        mockResponseIdentifier The key for the Mock HttpResponse
+     *                  object to be returned by the call() method
+     *    @note         Virtual due to package upgrade limitations
+     *    @return       self
+     */
+    global virtual Wsdl setMockResponseIdentifier(String mockResponseIdentifier){
+        
+        // Configure the response identifier
+        this.mockResponseIdentifier = mockResponseIdentifier;
+
         return this;
     }
 
@@ -274,8 +295,32 @@ global virtual with sharing class Wsdl {
         // Set the timeout
         this.timeout = timeout ?? 120000;
 
-        // Return self
         return this;
+    }
+
+
+    /** **************************************************************************************************** **
+     **                                        GLOBAL STATIC SETTERS                                         **
+     ** **************************************************************************************************** **/
+    /**
+     * description Method to add a mock response from a test class
+     * @param mockResponseIdentifier    The mock identifier
+     * @param statusCode                The mock status code
+     * @param body                      The mock body
+     * @note This is global so it can be used from external test classes
+     */
+    global static void addNamedMockResponse(String mockResponseIdentifier, Integer statusCode, String body){
+
+        // Create a new resposne
+        HttpResponse mockResponse = new HttpResponse();
+        mockResponse.setStatusCode(statusCode);
+        mockResponse.setBody(body);
+
+        // Create a new HttpResponse object to match the identifier
+        Wsdl.namedMockResponses.put(
+            mockResponseIdentifier,
+            mockResponse
+        );
     }
 
 
@@ -294,8 +339,21 @@ global virtual with sharing class Wsdl {
         // Set start date
         Integer startDateTime = Datetime.now().millisecond();
 
+        // If we are in a test and have a response identifier populated, validate that the response exists
+        if(Test.isRunningTest() && String.isNotBlank(this.mockResponseIdentifier) && !Wsdl.namedMockResponses.containsKey(mockResponseIdentifier)){
+            throw new SoapUtilException(
+                String.format(
+                    Wsdl.MSG_INVALID_MOCK_RESPONSE_ID,
+                    new String[]{mockResponseIdentifier})
+            );
+        }
+
         // Send the request or send a Mock Response whilst running an apex test
-        this.response = (!Test.isRunningTest()) ? new Http().send(this.request) : this.mockResponse;
+        // Is NOT Test? --> Execute Http Callout
+        // Is Test and this.Mock Response = NOT NULL? --> Return this.mockResponse
+        // Else return named mock response based on identifier
+        this.response = (!Test.isRunningTest()) ? new Http().send(this.request) : 
+                        this.mockResponse ?? Wsdl.namedMockResponses.get(this.mockResponseIdentifier);
 
         // Calculate call duration in milliseconds
         this.executionTime = Datetime.now().millisecond() - startDateTime;
@@ -377,7 +435,7 @@ global virtual with sharing class Wsdl {
                     String.format(
                         Wsdl.MSG_UNKNOWN_HTTP_STATUS_CODE,
                         new String[]{
-                            String.valueOf(this.response.getStatusCode()),
+                            this.response.getStatusCode().toString(),
                             this.response.getBody()
                         }
                     )
@@ -437,9 +495,18 @@ global virtual with sharing class Wsdl {
         // Set start date
         Integer startDateTime = Integer.valueOf(Datetime.now().millisecond());
 
+        // If we are in a test and have a response identifier populated, validate that the response exists
+        if(Test.isRunningTest() && String.isNotBlank(this.mockResponseIdentifier) && !Wsdl.namedMockResponses.containsKey(mockResponseIdentifier)){
+            throw new SoapUtilException(
+                String.format(
+                    Wsdl.MSG_INVALID_MOCK_RESPONSE_ID,
+                    new String[]{mockResponseIdentifier})
+            );
+        }
+
         // Call the handler to clean up the bearer token and calculate the exection time
         return this.handleGetXsr(
-            ((!Test.isRunningTest()) ? new Http().send(this.request) : this.mockResponse)?.getXmlStreamReader(),
+            (!Test.isRunningTest()) ? new Http().send(this.request)?.getXmlStreamReader() : this.mockResponse?.getXmlStreamReader() ?? Wsdl.namedMockResponses.get(this.mockResponseIdentifier)?.getXmlStreamReader(),
             startDateTime
         );
     }
@@ -468,8 +535,8 @@ global virtual with sharing class Wsdl {
         this.soapHeaderMap.put(
             'CallOptions',
             new Map<String,Object>{
-                'client'           => (this.clientId        !=null) ? String.valueOf(this.clientId)        : '',
-                'defaultNamespace' => (this.defaultNamespace!=null) ? String.valueOf(this.defaultNamespace): ''
+                'client'           => this.clientId         ?.toString() ?? '' ,
+                'defaultNamespace' => this.defaultNamespace ?.toString() ?? ''
             }
         );
     }
@@ -564,7 +631,7 @@ global virtual with sharing class Wsdl {
         return(
             (Test.isRunningTest()) ?
                 Wsdl.VAL_BEARER_TOKEN_HIDDEN_MESSAGE :
-                (LIGHTNING_CONTEXTS.contains(System.Request.getCurrent().getQuiddity())) ?
+                (Constant.VAL_LIGHTNING_CONTEXTS.contains(System.Request.getCurrent().getQuiddity())) ?
                     Page.getSoapApiSessionId?.getContent()?.toString()?.trim() :
                     UserInfo.getSessionId()
         );
@@ -604,7 +671,7 @@ global virtual with sharing class Wsdl {
         // Try/Catch block specifically for Catching XML errors
         try{
             // Iterate the XML to find the fault code and fault string
-            while(xsr.hasNext()){
+            while(true){
                 if(xsr.getEventType() == XmlTag.START_ELEMENT ){
 
                     // Get the fault code first
@@ -639,7 +706,7 @@ global virtual with sharing class Wsdl {
                         break;
                     }
                 }
-                xsr.next();
+                if(xsr.hasNext()){xsr.next();}else{break;}
             }
 
             // Throw an error if the default exceptions have been found
@@ -676,6 +743,9 @@ global virtual with sharing class Wsdl {
      * @return      The SOAP API Response as an XmlStreamReader class instance
      */
     private XmlStreamReader handleGetXsr(XmlStreamReader xsr, Integer startDateTime){
+
+        // Combine all parts of a string into a single block, required for most of the text handling
+        xsr.setCoalescing(true);
 
         // Remove the bearer token from the request after a callout
         this.request.setBody(this.request.getBody().replace(this.bearerToken, VAL_BEARER_TOKEN_HIDDEN_MESSAGE));
