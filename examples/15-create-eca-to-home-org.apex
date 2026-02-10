@@ -32,6 +32,11 @@
 String appName  = 'Home_Org';
 String appLabel = 'Home Org';
 
+// Only use on scratch orgs that have a namespace attached to it
+// Make sure to add the underscores at the end like "ns__" or the permission set update will fail
+// Make it an empty string like '' if you do not use a namespace
+String appNamespace = 'saml2__';
+
 // Email recipient who get's the details of what has been created
 String emailRecipient = UserInfo.getUserEmail();
 
@@ -205,7 +210,7 @@ try{
             'ExtlClntAppOauthSettings',
             new Map<String,Object>{
                 'fullName'                  => appName + '_oauth',
-                'commaSeparatedOauthScopes' => 'Api, Web, Chatter, RefreshToken, SFApiPlatform, CDP',
+                'commaSeparatedOauthScopes' => 'Basic, Api, Web, Chatter, RefreshToken, SFApiPlatform, EinsteinGPT, CDPIngest, CDPProfile, CDPQuery, OpenID, Chatbot',
                 'externalClientApplication' => appName,
                 'isFirstPartyAppEnabled'    => false,
                 'label'                     => appName + '_oauth'
@@ -518,11 +523,11 @@ try{
                 'externalCredentialPrincipalAccesses'   => new Object[]{
                     new Map<String,Object>{
                         'enabled'                       => true,
-                        'externalCredentialPrincipal'   => appName + '-NAMED_PRINCIPAL'
+                        'externalCredentialPrincipal'   => appNamespace + appName + '-NAMED_PRINCIPAL'
                     },
                     new Map<String,Object>{
                         'enabled'                       => true,
-                        'externalCredentialPrincipal'   => appName + '-PER_USER_PRINCIPAL'
+                        'externalCredentialPrincipal'   => appNamespace + appName + '-PER_USER_PRINCIPAL'
                     }
                 }
             }
